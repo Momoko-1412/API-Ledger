@@ -1,0 +1,1704 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark"><link rel="icon" href="data:,">
+<title>API Ledger · 中转站账本与全局比价</title>
+<style>
+:root{--shell-bg:#efeaf6;--shell-bar:#ffffff;--shell-line:#e3ddf0;--shell-text:#241f33;--shell-dim:#7a7391;--shell-accent:#6E4F9A}
+@media (prefers-color-scheme: dark){:root{--shell-bg:#100e17;--shell-bar:#1c1928;--shell-line:#322c47;--shell-text:#ece8f5;--shell-dim:#9a92b5;--shell-accent:#b39de0}}
+*{box-sizing:border-box}
+html{background:var(--shell-bg)}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--shell-text)}
+.tabbar{position:sticky;top:0;z-index:60;display:flex;gap:6px;padding:10px 12px calc(10px + env(safe-area-inset-top, 0px));padding-top:calc(10px + env(safe-area-inset-top, 0px));background:var(--shell-bar);border-bottom:1px solid var(--shell-line)}
+.tabbtn{flex:1;border:1px solid var(--shell-line);background:transparent;color:var(--shell-dim);border-radius:10px;padding:9px 4px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.tabbtn.active{background:var(--shell-accent);border-color:var(--shell-accent);color:#fff}
+.page[hidden]{display:none}
+
+.pg-r{--bg:#FFF5F5;--cb:#FFF;--cbd:#F3D9D9;--t:#4A3535;--ts:#9B8181;--a:#F2A7A7;--as:#FDDEDE;--st:#C48B8B;--dv:#F3E0E0;--g:#A8D8B9;--b:#A8C8F0;--p:#D0B8E8;--y:#F5E0A0;--warn:#E88;--sh:rgba(200,150,150,.08);--sum1:#F2A7A7;--sum2:#D0B8E8}
+.pg-r.dark{--bg:#1E1A2E;--cb:#2A2540;--cbd:#3D3658;--t:#E8E0F0;--ts:#9B90B0;--a:#C8A0E0;--as:#3D3060;--st:#C8A0E0;--dv:#3D3658;--g:#80C0A0;--b:#90B0D8;--p:#B898D0;--y:#D8C880;--warn:#E88;--sh:rgba(0,0,0,.2);--sum1:#D88FC0;--sum2:#6C5CE0}
+.pg-r *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+.pg-r{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--t);min-height:100vh;transition:background .35s,color .35s;line-height:1.6}
+.pg-r .c{max-width:480px;margin:0 auto;padding:20px 16px 40px}
+.pg-r .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding:0 4px}
+.pg-r .hd h1{font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px}
+.pg-r .tt{cursor:pointer;font-size:20px}
+.pg-r .ydrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.pg-r .ydcell{background:var(--cb);border:1px solid var(--cbd);border-radius:12px;padding:7px 12px;line-height:1.3;box-shadow:0 2px 10px var(--sh)}
+.pg-r .ydcell .yl{font-size:12px;color:var(--ts);margin-bottom:2px;display:flex;align-items:center;gap:4px}
+.pg-r .ydcell .yv{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.pg-r .ydcell .yv.g{color:var(--g)}
+.pg-r .ydcell .yv.warn{color:var(--warn)}
+.pg-r .sum{background:linear-gradient(135deg,var(--sum1),var(--sum2));border-radius:16px;padding:20px;margin-bottom:12px;color:#FFF;box-shadow:0 4px 16px var(--sh)}
+.pg-r .sum .sl{font-size:13px;opacity:.85;margin-bottom:6px}
+.pg-r .sum .sv{font-size:32px;font-weight:700;margin-bottom:10px}
+.pg-r .sum .ss{display:flex;gap:16px;font-size:13px;opacity:.95;align-items:center;justify-content:space-between}
+.pg-r .nav{display:flex;gap:8px;margin-bottom:16px}
+.pg-r .navbtn{flex:1;text-align:center;padding:10px;border-radius:12px;background:var(--cb);border:1px solid var(--cbd);color:var(--st);font-size:13px;font-weight:600;text-decoration:none;transition:.2s}
+.pg-r .navbtn:hover{background:var(--as)}
+.pg-r .navbtn[aria-disabled="true"]{opacity:.75;cursor:pointer}
+.pg-r .card{background:var(--cb);border:1px solid var(--cbd);border-radius:12px;padding:10px 12px;margin-bottom:8px;box-shadow:0 2px 12px var(--sh)}
+.pg-r .card .name{font-size:15px;font-weight:700;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+.pg-r .card .name .badge{font-size:11px;font-weight:500;padding:3px 8px;border-radius:8px;background:var(--as);color:var(--st)}
+.pg-r .row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
+.pg-r .row .l{color:var(--ts)}
+.pg-r .row .v{font-weight:600;font-variant-numeric:tabular-nums}
+.pg-r .v.g{color:var(--g)}
+.pg-r .v.b{color:var(--b)}
+.pg-r .v.p{color:var(--p)}
+.pg-r .v.y{color:var(--y)}
+.pg-r .v.warn{color:var(--warn)}
+.pg-r .sum .v.g{color:var(--g);font-weight:700;font-size:17px;text-shadow:1.5px 0 0.5px #fff,-1.5px 0 0.5px #fff,0 1.5px 0.5px #fff,0 -1.5px 0.5px #fff,1.1px 1.1px 0.5px #fff,-1.1px 1.1px 0.5px #fff,1.1px -1.1px 0.5px #fff,-1.1px -1.1px 0.5px #fff}
+.pg-r .dv{height:1px;background:var(--dv);margin:8px 0}
+.pg-r .txw{margin-top:4px}
+.pg-r .txw > summary{cursor:pointer;font-size:12px;color:var(--st);font-weight:600;list-style:none;display:flex;align-items:center;gap:4px;padding:2px 0}
+.pg-r .txw > summary::-webkit-details-marker{display:none}
+.pg-r .txw > summary::before{content:'▸';font-size:11px;transition:transform .2s}
+.pg-r .txw[open] > summary::before{transform:rotate(90deg)}
+.pg-r .sugar-model-family{border-top:1px solid var(--dv);padding:6px 0}
+.pg-r .sugar-model-family > summary{cursor:pointer;color:var(--st);font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;list-style:none}
+.pg-r .sugar-model-family > summary::-webkit-details-marker{display:none}
+.pg-r .sugar-model-family > summary::before{content:'▸';font-size:10px}
+.pg-r .sugar-model-family[open] > summary::before{transform:rotate(90deg)}
+.pg-r .sugar-model-billing{padding:5px 0 5px 12px}
+.pg-r .sugar-model-billing > summary{cursor:pointer;color:var(--ts);font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px;padding:5px 0;list-style:none}
+.pg-r .sugar-model-billing > summary::-webkit-details-marker{display:none}
+.pg-r .sugar-model-billing > summary::before{content:'▸';font-size:10px;transition:transform .2s}
+.pg-r .sugar-model-billing[open] > summary::before{transform:rotate(90deg)}
+.pg-r .sugar-price-entry{padding:6px 0;border-top:1px solid var(--dv);display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:11px;line-height:1.5}
+.pg-r .sugar-price-name{color:var(--ts);flex:1;min-width:0;overflow-wrap:anywhere}
+.pg-r .sugar-price-amount{color:var(--st);font-variant-numeric:tabular-nums;text-align:right;flex:0 1 auto;overflow-wrap:anywhere}
+.pg-r .sugar-price-alert{font-size:11px;line-height:1.5;color:var(--warn);padding:6px 0}
+.pg-r .sugar-manual-prices{color:var(--ts);font-size:11px;font-weight:600;padding:8px 0 3px}
+.pg-r .txlist{margin-top:6px;display:flex;flex-direction:column;gap:0}
+.pg-r .txrow{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-top:1px solid var(--dv)}
+.pg-r .txrow .txd{color:var(--ts);flex:0 0 auto;min-width:44px}
+.pg-r .txrow .txm{color:var(--ts);flex:1;padding:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.pg-r .txrow .txq{font-weight:600;font-variant-numeric:tabular-nums;flex:0 0 auto;color:var(--warn)}
+.pg-r .txempty{font-size:12px;color:var(--ts);padding:6px 0}
+.pg-r .txw > summary .txright{margin-left:auto;display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.pg-r .txw > summary .txdays{font-size:11px;font-weight:500;color:var(--ts)}
+.pg-r .txglobalbtn{width:100%;border:1px solid var(--cbd);background:var(--bg);color:var(--st);border-radius:10px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.5}
+.pg-r .txglobalbtn:active{transform:scale(.98)}
+.pg-r .txpreset{flex:1;border:1px solid var(--cbd);background:var(--bg);color:var(--ts);border-radius:10px;padding:9px 0;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.pg-r .txpreset.active{background:var(--a);border-color:var(--a);color:#FFF}
+.pg-r .empty{text-align:center;color:var(--ts);padding:40px 0;font-size:14px}
+.pg-r .loading{text-align:center;color:var(--ts);padding:40px 0;font-size:14px}
+.pg-r .err{background:var(--as);color:var(--warn);border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+.pg-r .foldbtn{flex:0 0 auto;border:1px solid rgba(255,255,255,.65);background:rgba(255,255,255,.24);color:#FFF;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.pg-r .foldbtn:active{transform:scale(.97)}
+.pg-r .sortbar{background:var(--cb);border:1px solid var(--cbd);border-radius:12px;padding:8px 10px;margin-bottom:10px;box-shadow:0 2px 10px var(--sh)}
+.pg-r .sortbar .scur{font-size:12px;color:var(--ts);margin-bottom:6px;line-height:1.4}
+.pg-r .sortbar .scur b{color:var(--st);font-size:13px}
+.pg-r .sortbar .shint{margin-left:6px;font-size:11px}
+.pg-r .sortbtns{display:flex;flex-wrap:wrap;gap:6px}
+.pg-r .sortbtn{border:1px solid var(--cbd);background:var(--bg);color:var(--ts);border-radius:999px;padding:4px 11px;font-size:12px;cursor:pointer;font-family:inherit;line-height:1.5}
+.pg-r .sortbtn.active{background:var(--a);border-color:var(--a);color:#FFF;font-weight:700}
+.pg-r #rDaysList[hidden]{display:none}
+.pg-r .card .chead{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.pg-r .card .cname{font-size:15px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-r .card .badge{font-size:10px;font-weight:500;padding:2px 7px;border-radius:7px;background:var(--as);color:var(--st);white-space:nowrap}
+.pg-r .card .cbal{margin-left:auto;font-size:11px;color:var(--ts);white-space:nowrap;font-variant-numeric:tabular-nums}
+.pg-r .card .cbal b{font-size:15px;color:var(--t)}
+.pg-r .card .cbal .cg{color:var(--g);font-weight:700;font-size:12px}
+.pg-r .card .cmeta{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:11px;color:var(--ts);line-height:1.5;margin-top:3px;font-variant-numeric:tabular-nums}
+.pg-r .card .cmeta b{color:var(--t);font-weight:600}
+.pg-r .card .cmeta b.g{color:var(--g)}
+.pg-r .card .cmeta b.warn{color:var(--warn)}
+.pg-r .card .cmeta b.y{color:var(--y)}
+.pg-r .card .csub{font-size:11px;color:var(--ts);line-height:1.45;margin-top:2px;overflow-wrap:anywhere}
+
+
+/* Global comparison: narrow screen friendly, independent from existing page styles. */
+.tabbar .tabbtn{min-width:0;font-size:clamp(10px,2.8vw,13px)}
+.pg-g{--bg:#FFF5F5;--cb:#fff;--cbd:#F3D9D9;--t:#4A3535;--ts:#9B8181;--a:#F2A7A7;--st:#C48B8B;--as:#FDDEDE;--dv:#F3E0E0;
+ background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh;padding:20px 16px 56px}
+.pg-g.dark{--bg:#1E1A2E;--cb:#2A2540;--cbd:#3D3658;--t:#E8E0F0;--ts:#9B90B0;--a:#C8A0E0;--st:#C8A0E0;--as:#3D3060;--dv:#3D3658}
+.pg-g .global-compare-wrap{width:min(480px,100%);margin:0 auto}
+.pg-g .global-compare-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.pg-g .global-compare-top h1{font-size:21px;line-height:1.35;margin:0}
+.pg-g .global-compare-back{display:inline-block;margin-bottom:11px;font-size:13px;color:var(--st);text-decoration:none}
+.pg-g .global-compare-theme{border:1px solid var(--cbd);color:var(--st);background:var(--cb);border-radius:10px;padding:7px 10px;cursor:pointer}
+.pg-g .global-compare-controls{background:var(--cb);border:1px solid var(--cbd);border-radius:14px;padding:13px;margin:0 0 14px}
+.pg-g .global-compare-current{font-size:13px;line-height:1.5;color:var(--ts);margin-bottom:10px;font-weight:600}
+.pg-g .global-compare-current small{display:block;font-size:11px;font-weight:400;margin-top:3px}
+.pg-g .global-compare-filter{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.pg-g .global-compare-filter button{padding:8px 14px;border-radius:24px;background:var(--bg);color:var(--ts);border:1px solid var(--cbd);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.pg-g .global-compare-filter button.active{background:var(--a);border-color:var(--a);color:#fff}
+.pg-g .global-compare-legend{font-size:11px;color:var(--ts);line-height:1.5;padding:0 1px 9px}
+.pg-g .global-compare-family{background:var(--cb);border:1px solid var(--cbd);border-radius:13px;margin-bottom:10px;overflow:hidden}
+.pg-g .global-compare-family>summary{padding:13px 12px;cursor:pointer;font-size:14px;font-weight:700;color:var(--t);display:flex;gap:6px;align-items:center;overflow-wrap:anywhere;list-style:none}
+.pg-g .global-compare-family>summary::-webkit-details-marker{display:none}
+.pg-g .global-compare-family>summary:before{content:'▸';font-size:12px;color:var(--st);flex-shrink:0;transition:transform .15s}
+.pg-g .global-compare-family[open]>summary:before{transform:rotate(90deg)}
+.pg-g .global-compare-count{font-size:12px;font-weight:500;color:var(--ts)}
+.pg-g .global-compare-family table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;line-height:1.55}
+/* Token prices need full single-line labels; station gets four Han characters
+   (4×11px + 12px cell padding), with the flexible remainder for model names. */
+.pg-g .global-compare-table-volume .global-compare-col-site{width:56px}
+.pg-g .global-compare-table-volume .global-compare-col-model{width:auto}
+.pg-g .global-compare-table-volume .global-compare-col-token,.pg-g .global-compare-table-volume .global-compare-col-cache{width:114px}
+.pg-g .global-compare-table .global-compare-model{white-space:normal;word-break:break-word;overflow-wrap:anywhere}
+.pg-g .global-compare-table-call .global-compare-price{white-space:nowrap;word-break:normal;overflow-wrap:normal}
+.pg-g .global-compare-table-volume .global-compare-price,.pg-g .global-compare-table-volume .global-compare-cache{white-space:nowrap;word-break:normal;overflow-wrap:normal;text-align:center}
+.pg-g .global-compare-family th{font-weight:700;background:var(--bg);color:var(--t);text-align:left;border-top:1px solid var(--dv);border-bottom:1px solid var(--dv);padding:8px 6px}
+.pg-g .global-compare-family thead th{text-align:center}
+.pg-g .global-compare-family td{border-top:1px solid var(--dv);color:var(--ts);padding:8px 6px;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}
+.pg-g .global-compare-channel-divider th{background:var(--as);color:var(--t);font-size:12px;font-weight:700;line-height:1.5;text-align:left;padding:10px 10px 10px 13px;border-top:2px solid var(--cbd);border-bottom:1px solid var(--cbd);box-shadow:inset 4px 0 0 var(--st)}
+.pg-g .global-compare-channel-block+.global-compare-channel-block .global-compare-channel-divider th{border-top:3px solid var(--cbd)}
+.pg-g .global-compare-channel-name{display:inline-block;overflow-wrap:anywhere}
+.pg-g .global-compare-channel-count{font-size:11px;font-weight:500;color:var(--ts);margin-left:8px;white-space:nowrap}
+.pg-g .global-compare-family .global-compare-site{color:var(--st);font-weight:600}
+.pg-g .global-compare-family .global-compare-price,.pg-g .global-compare-family .global-compare-cache{color:var(--t);font-variant-numeric:tabular-nums}
+.pg-g .global-compare-cache{font-size:inherit}
+.pg-g #global-compare-content.sugar-hide-cache .global-compare-cache{visibility:hidden}
+.pg-g .global-compare-family td.global-compare-price,.pg-g .global-compare-family td.global-compare-cache{text-align:center}
+.pg-g .global-compare-empty{padding:12px;font-size:12px;color:var(--ts);border-top:1px solid var(--dv)}
+@media(max-width:400px){
+  /* At narrow widths retain full price strings without horizontal scrolling.
+     The model column remains the flexible one and wraps within its cell. */
+  .pg-g .global-compare-table-volume .global-compare-col-site{width:48px}
+  .pg-g .global-compare-table-volume .global-compare-col-token,.pg-g .global-compare-table-volume .global-compare-col-cache{width:94px}
+  .pg-g .global-compare-table-volume{font-size:9px}
+  .pg-g .global-compare-table-volume th,.pg-g .global-compare-table-volume td{padding:7px 4px;font-size:9px}
+}
+@media(max-width:360px){.pg-g{padding:14px 10px 40px}.pg-g .global-compare-family td,.pg-g .global-compare-family th{padding:7px 4px;font-size:10px}.pg-g .global-compare-table-volume th,.pg-g .global-compare-table-volume td{font-size:9px}}
+
+</style>
+</head>
+<body>
+<nav class="tabbar" aria-label="功能导航">
+<button class="tabbtn active" id="tab-relay" type="button" onclick="switchPage('relay')">中转站账本</button>
+<button class="tabbtn" id="tab-compare" type="button" onclick="switchPage('compare')">全局比价</button>
+</nav>
+<section class="page pg-r" id="page-relay">
+<div class="c">
+<div class="hd">
+<h1>🌟 API余额总览</h1>
+<div style="display:flex;align-items:center;gap:10px;">
+  <button type="button" id="sugar-price-update" onclick="SugarPricing.refresh()" style="border:1px solid var(--cbd);border-radius:10px;background:var(--cb);color:var(--st);padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;">🔄 更新价格</button>
+  <button type="button" onclick="r_showCfgModal()" style="border:1px solid var(--cbd);border-radius:10px;background:var(--cb);color:var(--st);padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;">⚙️ 配置连接</button>
+  <span class="tt" onclick="r_tg()"><span id="rti">☀️</span></span>
+</div>
+</div>
+<div id="rcfgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(3px);z-index:99;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target.id==='rcfgModal')r_hideCfgModal()">
+  <div style="width:min(420px,100%);background:var(--cb);border:1px solid var(--cbd);border-radius:16px;padding:20px;box-shadow:0 12px 32px rgba(0,0,0,.2);">
+    <h2 style="font-size:17px;margin-bottom:6px;color:var(--t);">⚙️ Supabase 安全连接配置</h2>
+    <p style="font-size:12px;color:var(--ts);margin-bottom:14px;">仅在当前浏览器保存公开项目地址和 publishable/anon Key，请勿输入 service_role 或 Secret Key。</p>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:12px;color:var(--ts);margin-bottom:4px;">Supabase URL</label>
+      <input id="rcfgUrl" type="url" placeholder="https://xxxx.supabase.co" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--cbd);background:var(--bg);color:var(--t);font-size:14px;outline:none;">
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:12px;color:var(--ts);margin-bottom:4px;">Supabase Anon Key</label>
+      <input id="rcfgKey" type="password" placeholder="eyJ..." style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--cbd);background:var(--bg);color:var(--t);font-size:14px;outline:none;">
+    </div>
+    <p id="rcfgMsg" style="color:var(--warn);font-size:12px;min-height:16px;margin-bottom:8px;"></p><div style="display:flex;gap:10px;">
+      <button type="button" onclick="r_hideCfgModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--cbd);background:transparent;color:var(--ts);font-weight:600;cursor:pointer;">取消</button>
+      <button type="button" onclick="r_saveCfgLocal()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--a);color:#fff;font-weight:600;cursor:pointer;">保存并刷新</button>
+    </div>
+  </div>
+</div>
+<div id="rtxModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(3px);z-index:99;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target.id==='rtxModal')r_closeTxDays()">
+  <div style="width:min(420px,100%);background:var(--cb);border:1px solid var(--cbd);border-radius:16px;padding:20px;box-shadow:0 12px 32px rgba(0,0,0,.2);">
+    <h2 style="font-size:17px;margin-bottom:6px;color:var(--t);">⚙️ 最近流水天数（全局设置）</h2>
+    <p style="font-size:12px;color:var(--ts);margin-bottom:14px;">所有站点卡片的「最近流水」统一只显示最近几天的记录，改一次全部生效。设置保存在你当前浏览器的本地存储里，下次打开还记得。</p>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button type="button" class="txpreset" data-days="3" onclick="r_pickTxDays(3)">3天</button>
+      <button type="button" class="txpreset" data-days="7" onclick="r_pickTxDays(7)">7天</button>
+      <button type="button" class="txpreset" data-days="14" onclick="r_pickTxDays(14)">14天</button>
+      <button type="button" class="txpreset" data-days="30" onclick="r_pickTxDays(30)">30天</button>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:12px;color:var(--ts);margin-bottom:4px;">自定义天数</label>
+      <input id="rtxCustom" type="number" min="1" max="3650" step="1" inputmode="numeric" placeholder="输入天数，如 5" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--cbd);background:var(--bg);color:var(--t);font-size:14px;outline:none;" oninput="r_pickTxDays(null)">
+    </div>
+    <p id="rtxMsg" style="color:var(--warn);font-size:12px;min-height:16px;margin-bottom:8px;"></p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" onclick="r_closeTxDays()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--cbd);background:transparent;color:var(--ts);font-weight:600;cursor:pointer;">取消</button>
+      <button type="button" onclick="r_saveTxDays()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--a);color:#fff;font-weight:600;cursor:pointer;">保存</button>
+    </div>
+  </div>
+</div>
+<div class="nav" style="margin-bottom:8px"><a class="navbtn" href="#" onclick="showConverterPlaceholder();return false">🧮 打开换算工具</a></div>
+<div class="nav"><a class="navbtn" href="#" onclick="switchPage('compare');return false">⚖️ 全局比价</a></div>
+<div id="root"><div class="loading">加载中…</div></div>
+</div>
+</section>
+<section class="page pg-g" id="page-compare" hidden>
+  <div class="global-compare-wrap">
+    <a class="global-compare-back" href="#" onclick="switchPage('relay');return false">← 返回站点总览</a>
+    <div class="global-compare-top">
+      <h1>全局比价</h1>
+      <button type="button" class="global-compare-theme" onclick="SugarCompare.theme()" aria-label="切换主题"><span id="global-compare-theme">☀️</span></button>
+    </div>
+    <div class="global-compare-controls">
+      <div class="global-compare-current"><span id="global-compare-sort-status">当前排序：价格 · 从低到高 ↑（按次）</span>
+        <small>点选项切换排序，再点同一项切换正序 / 逆序</small>
+      </div>
+      <div class="global-compare-filter" role="group" aria-label="排序方式">
+        <button type="button" class="active" data-sort="price" aria-pressed="true" onclick="SugarCompare.chooseSort('price')">价格 ↑</button>
+        <button type="button" data-sort="website" aria-pressed="false" onclick="SugarCompare.chooseSort('website')">网站</button>
+        <button type="button" data-sort="channel" aria-pressed="false" onclick="SugarCompare.chooseSort('channel')">渠道</button>
+      </div>
+      <div class="global-compare-filter" role="group" aria-label="计费方式">
+        <button type="button" class="active" data-billing="per_call" aria-pressed="true" onclick="SugarCompare.chooseBilling('per_call')">按次</button>
+        <button type="button" data-billing="per_token" aria-pressed="false" onclick="SugarCompare.chooseBilling('per_token')">按量</button>
+      </div>
+    </div>
+    <p class="global-compare-legend" id="global-compare-notice" aria-live="polite">正在读取当前账户保存的模型报价…</p>
+    <div id="global-compare-content"></div>
+  </div>
+</section>
+<dialog id="converter-placeholder" aria-label="换算工具提示" style="position:fixed;margin:auto;border:1px solid #eadbe6;border-radius:14px;padding:22px;max-width:360px;width:calc(100% - 32px);background:#fffafa;color:#59424f;box-shadow:0 18px 50px #47364b33;z-index:250">
+<strong style="display:block;font-size:17px;margin-bottom:8px">换算工具尚未接入</strong>
+<p style="font-size:13px;line-height:1.7;margin:0 0 16px">该功能正在重新独立开发。公开版目前仅保留入口，不包含旧计算器代码。</p>
+<button type="button" onclick="closeConverterPlaceholder()" style="border:0;border-radius:10px;padding:9px 18px;color:white;background:#c48b8b;cursor:pointer">知道了</button>
+</dialog>
+
+<script>
+/* API Ledger: browser-only Supabase email/password authentication.
+ * Only URL + publishable/anon key are application config. Passwords are never saved.
+ * Session tokens are scoped to the selected Supabase project and stored in this
+ * browser's localStorage; do not load untrusted scripts on this origin.
+ */
+(function (global) {
+  'use strict';
+  var STORAGE_KEY = 'sugar_ledger_auth_session_v1';
+  var session = null;
+  var refreshJobs = {};
+  var currentUrl = '';
+  var currentKey = '';
+  var knownKeys = Object.create(null);
+  var ui = null;
+
+  function normalizeUrl(value) {
+    var valueString = String(value || '').trim().replace(/\/+$/, '');
+    if (!valueString) return '';
+    var parsed;
+    try { parsed = new URL(valueString); } catch (e) { throw new Error('Supabase URL 格式无效'); }
+    if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && /^(localhost|127\.0\.0\.1)$/.test(parsed.hostname))) {
+      throw new Error('Supabase URL 必须使用 HTTPS');
+    }
+    if (parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname !== '/') {
+      throw new Error('Supabase URL 应只包含项目根地址');
+    }
+    return parsed.origin;
+  }
+  function readStored() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if (saved && saved.url && saved.access_token && saved.refresh_token &&
+          Number.isFinite(Number(saved.expires_at))) return saved;
+    } catch (e) {}
+    return null;
+  }
+  session = readStored();
+  function emit(type) {
+    global.dispatchEvent(new CustomEvent('sugar-auth-changed', { detail: { type: type } }));
+  }
+  function persist(next, type) {
+    session = next;
+    try {
+      if (next) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      else localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {}
+    updateUI();
+    if (type) emit(type);
+  }
+  function configure(url, key) {
+    currentUrl = normalizeUrl(url);
+    currentKey = String(key || '').trim();
+    if (currentUrl && currentKey) knownKeys[currentUrl] = currentKey;
+    updateUI();
+    return { url: currentUrl, key: currentKey };
+  }
+  function localConfig() {
+    try {
+      var keys = [
+                ['hsb_supabase_url', 'hsb_supabase_key']
+      ];
+      for (var i = 0; i < keys.length; i++) {
+        var url = localStorage.getItem(keys[i][0]);
+        var key = localStorage.getItem(keys[i][1]);
+        if (url && key) return { url: url, key: key };
+      }
+    } catch (e) {}
+    return null;
+  }
+  function selectConfig(url, key) {
+    if (url && key) return configure(url, key);
+    if (currentUrl && currentKey) return { url: currentUrl, key: currentKey };
+    var found = localConfig();
+    return found ? configure(found.url, found.key) : { url: '', key: '' };
+  }
+  function authError(response, body) {
+    var message = (body && (body.msg || body.error_description || body.message || body.error)) || '';
+    if (response.status === 400 || response.status === 401) {
+      return new Error(String(message || '邮箱、密码或登录状态无效'));
+    }
+    return new Error(String(message || 'Supabase Auth 请求失败') + ' (' + response.status + ')');
+  }
+  async function authRequest(url, key, grant, body) {
+    var response = await fetch(url + '/auth/v1/token?grant_type=' + encodeURIComponent(grant), {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'apikey': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    var result = await response.json().catch(function () { return {}; });
+    if (!response.ok) {
+      var err = authError(response, result);
+      err.status = response.status;
+      throw err;
+    }
+    if (!result.access_token || !result.refresh_token) throw new Error('Supabase 未返回有效的登录凭证');
+    return {
+      url: url,
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+      expires_at: Number(result.expires_at) || Math.floor(Date.now() / 1000) + Number(result.expires_in || 3600),
+      email: (result.user && result.user.email) || (session && session.url === url && session.email) || ''
+    };
+  }
+  async function signIn(email, password, url, key) {
+    var cfg = selectConfig(url, key);
+    if (!cfg.url || !cfg.key) throw new Error('请先在任一账本的「配置」中填写 Supabase URL 和 Anon Key');
+    if (!email || !password) throw new Error('请输入邮箱和密码');
+    var next = await authRequest(cfg.url, cfg.key, 'password', { email: email, password: password });
+    persist(next, 'login');
+    closeDialog();
+    return next;
+  }
+  function hasSession(url) {
+    return !!(session && session.url === normalizeUrl(url) && session.access_token);
+  }
+  async function refresh(url, key) {
+    if (refreshJobs[url]) return refreshJobs[url];
+    if (!session || session.url !== url) throw new Error('请先登录 Supabase 账号');
+    var original = session.refresh_token;
+    var task = (async function () {
+      try {
+        var next = await authRequest(url, key, 'refresh_token', { refresh_token: original });
+        if (!session || session.url !== url || session.refresh_token !== original) {
+          throw new Error('登录状态已更新，请重试');
+        }
+        persist(next);
+        return next.access_token;
+      } catch (err) {
+        if ((err.status === 400 || err.status === 401) &&
+            session && session.url === url && session.refresh_token === original) {
+          persist(null, 'logout');
+          openDialog(url, key);
+        }
+        throw err;
+      }
+    })();
+    refreshJobs[url] = task;
+    try { return await task; } finally { if (refreshJobs[url] === task) delete refreshJobs[url]; }
+  }
+  async function accessToken(url, key, force) {
+    var cfg = configure(url, key);
+    if (!cfg.url || !cfg.key) throw new Error('请先配置 Supabase');
+    if (!hasSession(cfg.url)) {
+      openDialog(cfg.url, cfg.key);
+      throw new Error('请先登录 Supabase 账号');
+    }
+    if (!force && Number(session.expires_at) * 1000 > Date.now() + 60000) return session.access_token;
+    return refresh(cfg.url, cfg.key);
+  }
+  async function authorizedFetch(url, key, path, options) {
+    var cfg = configure(url, key);
+    var token = await accessToken(cfg.url, cfg.key, false);
+    async function send(jwt) {
+      var opts = Object.assign({}, options || {});
+      opts.headers = Object.assign({}, opts.headers || {}, {
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + jwt,
+        'Content-Type': 'application/json'
+      });
+      return fetch(cfg.url + path, opts);
+    }
+    var response = await send(token);
+    if (response.status !== 401) return response;
+    token = await accessToken(cfg.url, cfg.key, true);
+    return send(token);
+  }
+  async function signOut() {
+    var previous = session;
+    var cfg = selectConfig();
+    // Revoke the actual session's project, even if another module was just configured.
+    var logoutKey = previous && (knownKeys[previous.url] || (cfg.url === previous.url ? cfg.key : ''));
+    persist(null, 'logout');
+    closeDialog();
+    if (previous && logoutKey) {
+      try {
+        await fetch(previous.url + '/auth/v1/logout', {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { 'apikey': logoutKey, 'Authorization': 'Bearer ' + previous.access_token }
+        });
+      } catch (e) {
+        // Local logout must succeed even when offline or the token has expired.
+      }
+    }
+  }
+  function updateUI() {
+    if (!ui) return;
+    var active = !!(session && (!currentUrl || session.url === currentUrl));
+    ui.trigger.textContent = active ? (session.email || '已登录') : '账户登录';
+    ui.email.textContent = active ? (session.email || '已登录的 Supabase 用户') : '';
+    ui.form.hidden = active;
+    ui.account.hidden = !active;
+    ui.trigger.title = active ? '管理账户 / 退出登录' : '登录 Supabase';
+  }
+  function openDialog(url, key) {
+    try { selectConfig(url, key); } catch (e) { if (ui) ui.message.textContent = e.message; }
+    if (!ui) return;
+    updateUI();
+    ui.message.textContent = currentUrl ? '' : '请先在任一账本的「配置」中填写 Supabase URL 和 Anon Key';
+    ui.dialog.hidden = false;
+    if (!session || session.url !== currentUrl) ui.emailInput.focus();
+  }
+  function closeDialog() {
+    if (!ui) return;
+    ui.dialog.hidden = true;
+    ui.password.value = '';
+    ui.message.textContent = '';
+  }
+  function installUI() {
+    if (ui || !document.body) return;
+    var css = document.createElement('style');
+    css.textContent = '#sugar-auth-trigger{position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:65;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:8px 12px;background:#fff;color:#51416d;border:1px solid #d9d0e9;border-radius:999px;font:12px system-ui,sans-serif;box-shadow:0 2px 12px #2222;cursor:pointer}' +
+      '#sugar-auth-dialog[hidden],#sugar-auth-dialog [hidden]{display:none!important}' +
+      '#sugar-auth-dialog{position:fixed;inset:0;z-index:120;background:rgba(25,20,35,.48);display:flex;align-items:center;justify-content:center;padding:16px;font:14px system-ui,sans-serif;color:#272334}' +
+      '#sugar-auth-dialog .sugar-box{width:min(390px,100%);background:#fff;border:1px solid #e6dff0;border-radius:16px;padding:24px;box-shadow:0 12px 40px #0002}' +
+      '#sugar-auth-dialog h2{font-size:19px;margin:0 0 9px}#sugar-auth-dialog p{line-height:1.5;font-size:12px;color:#736b83}' +
+      '#sugar-auth-dialog label{display:block;font-size:12px;margin:12px 0 5px}#sugar-auth-dialog input{display:block;width:100%;min-width:0;border:1px solid #d8d2e3;border-radius:9px;padding:11px;font:14px system-ui,sans-serif;color:#272334;background:#fff}' +
+      '#sugar-auth-dialog .sugar-actions{display:flex;gap:8px;margin-top:18px}#sugar-auth-dialog button{font:13px system-ui,sans-serif;border-radius:9px;cursor:pointer;padding:10px 12px;border:1px solid #ddd5ea;background:#fff;color:#51416d}' +
+      '#sugar-auth-dialog button.sugar-primary{background:#6e4f9a;color:#fff;border-color:#6e4f9a;flex:1}#sugar-auth-dialog button:disabled{opacity:.6;cursor:wait}' +
+      '#sugar-auth-message{min-height:17px;color:#a94343!important;white-space:pre-wrap}';
+    document.head.appendChild(css);
+    var trigger = document.createElement('button');
+    trigger.id = 'sugar-auth-trigger';
+    trigger.type = 'button';
+    document.body.appendChild(trigger);
+    var dialog = document.createElement('div');
+    dialog.id = 'sugar-auth-dialog';
+    dialog.hidden = true;
+    dialog.innerHTML = '<div class="sugar-box" role="dialog" aria-modal="true" aria-labelledby="sugar-auth-title">' +
+      '<h2 id="sugar-auth-title">Supabase 账户</h2>' +
+      '<div id="sugar-auth-form"><p>使用已有的 Supabase 邮箱和密码登录。密码不会保存在浏览器中。</p>' +
+      '<form id="sugar-auth-login-form"><label for="sugar-auth-email">邮箱</label><input id="sugar-auth-email" type="email" autocomplete="username" required>' +
+      '<label for="sugar-auth-password">密码</label><input id="sugar-auth-password" type="password" autocomplete="current-password" required>' +
+      '<div class="sugar-actions"><button type="button" id="sugar-auth-close">关闭</button><button class="sugar-primary" id="sugar-auth-submit" type="submit">登录</button></div></form></div>' +
+      '<div id="sugar-auth-account" hidden><p>当前登录邮箱：<strong id="sugar-auth-current-email"></strong></p>' +
+      '<div class="sugar-actions"><button type="button" id="sugar-auth-account-close">关闭</button><button class="sugar-primary" type="button" id="sugar-auth-logout">退出登录</button></div></div>' +
+      '<p id="sugar-auth-message" role="alert"></p></div>';
+    document.body.appendChild(dialog);
+    ui = {
+      trigger: trigger, dialog: dialog,
+      form: document.getElementById('sugar-auth-form'),
+      account: document.getElementById('sugar-auth-account'),
+      email: document.getElementById('sugar-auth-current-email'),
+      emailInput: document.getElementById('sugar-auth-email'),
+      password: document.getElementById('sugar-auth-password'),
+      message: document.getElementById('sugar-auth-message')
+    };
+    trigger.addEventListener('click', function () { openDialog(); });
+    document.getElementById('sugar-auth-close').addEventListener('click', closeDialog);
+    document.getElementById('sugar-auth-account-close').addEventListener('click', closeDialog);
+    dialog.addEventListener('click', function (e) { if (e.target === dialog) closeDialog(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !dialog.hidden) closeDialog(); });
+    document.getElementById('sugar-auth-logout').addEventListener('click', function () { signOut(); });
+    document.getElementById('sugar-auth-login-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var submit = document.getElementById('sugar-auth-submit');
+      submit.disabled = true;
+      ui.message.textContent = '';
+      try {
+        await signIn(ui.emailInput.value.trim(), ui.password.value);
+      } catch (err) {
+        ui.message.textContent = err.message || '登录失败';
+      } finally {
+        ui.password.value = '';
+        submit.disabled = false;
+      }
+    });
+    var cfg = localConfig();
+    if (cfg) configure(cfg.url, cfg.key);
+    updateUI();
+  }
+  global.addEventListener('storage', function (event) {
+    if (event.key !== STORAGE_KEY) return;
+    session = readStored();
+    updateUI();
+    emit(session ? 'login' : 'logout');
+  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installUI);
+  else installUI();
+  global.SugarAuth = {
+    authorizedFetch: authorizedFetch,
+    signIn: signIn,
+    signOut: signOut,
+    hasSession: hasSession,
+    showLogin: openDialog,
+    getSession: function () { return session ? { url: session.url, email: session.email, expires_at: session.expires_at } : null; }
+  };
+})(window);
+
+</script>
+<script>
+(function(global){
+'use strict';
+let channels=[],families=[],sources=[],sorts=[],ui=[],preferences=[],loaded=false,epoch=0;
+function match(name){
+const text=String(name||'').normalize('NFKC').trim().toLowerCase().replace(/[_\s/]+/g,'-');
+for(const row of families){try{const m=new RegExp(row.match_pattern,'i').exec(text);if(m&&(m.index===0||/[^a-z0-9]/.test(text[m.index-1])))return row.family_key;}catch(e){}}
+return null;
+}
+async function load(url,key){
+if(!url||!key||!global.SugarAuth||!SugarAuth.hasSession(url))return false;
+const seq=++epoch;
+const names=['hsb_price_channels','hsb_price_model_families','hsb_price_sources','hsb_price_sort_options','hsb_price_ui_config','hsb_price_user_preferences'];
+try {
+const results=await Promise.all(names.map(async table=>{
+const r=await SugarAuth.authorizedFetch(url,key,'/rest/v1/'+table+'?select=*&order=sort_order.asc',{method:'GET',cache:'no-store'});
+if(!r.ok)throw Error('HTTP '+r.status);const rows=await r.json();if(!Array.isArray(rows))throw Error('Malformed config');return rows.filter(x=>x.enabled!==false);
+}));
+if(seq!==epoch)return false;
+[channels,families,sources,sorts,ui,preferences]=results;loaded=true;
+if(global.SugarPricing&&SugarPricing.reloadCatalog)await SugarPricing.reloadCatalog();
+if(global.SugarCompare)SugarCompare.render();
+return true;
+}catch(e){if(seq===epoch)console.warn('价格配置读取失败，保留原有显示',e.message);return false;}
+}
+function clear(){epoch++;channels=[];families=[];sources=[];sorts=[];ui=[];preferences=[];loaded=false;}
+global.SugarCatalogConfig={load,clear,match,isLoaded:()=>loaded,getChannels:()=>channels.slice(),getFamilies:()=>families.slice(),getSources:()=>sources.slice(),getSorts:()=>sorts.slice(),getUI:()=>ui.slice(),getPreferences:()=>preferences.slice()};
+})(window);
+</script>
+<script>
+/* API Ledger: user-scoped prices displayed inside each station's existing
+ * "模型定价" accordion. The top balance overview stays unchanged.
+ * All displayed $/¥ station prices are treated as CNY (no FX conversion).
+ */
+(function (global) {
+'use strict';
+// Public refresh excludes logged-in-site prices imported by Hark.
+// Never replace Hark's prices with empty or incomplete public responses.
+const SITE_IDS = [];
+const LABELS = {};
+const FAMILIES = ['gemini-3.7-flash','gemini-3.8-flash','gemini-4-Argon',
+  'claude-opus-5.5','claude-opus-5','claude-sonnet-5.5','claude-sonnet-5',
+  'deepseek-v4.1-flash','deepseek-v4-pro'];
+const LAST_KEY = 'sugar_pricing_last_auto_attempt';
+let url = '', key = '', rows = [], errors = {}, loading = false, generation = 0;
+let dataLoaded = false, lastNotice = '';
+
+function stationKey(name){return String(name||'').normalize('NFKC').trim().toLowerCase().replace(/[\s._-]/g,'');}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmt(n) {
+  if (n == null || n === '') return '—';
+  const value = Number(n);
+  return Number.isFinite(value) ? String(Number(value.toFixed(8))) : '—';
+}
+// The stored family column predates strict model suffix rules; verify the
+// actual name on every read so old cached records cannot bypass this filter.
+function familyOf(modelName) {
+  if(global.SugarCatalogConfig&&SugarCatalogConfig.isLoaded())return SugarCatalogConfig.match(modelName);
+  const s=String(modelName||'').normalize('NFKC').trim().toLowerCase()
+    .replace(/[_\s/]+/g,'-');
+  const patterns=[
+    [/gemini-3[.-]7-flash(?:-(?:high|xhigh|max))?$/,'gemini-3.7-flash'],
+    [/gemini-3[.-]8-flash(?:-(?:high|xhigh|max))?$/,'gemini-3.8-flash'],
+    [/gemini-4-argon(?:-(?:high|xhigh|max))?$/,'gemini-4-Argon'],
+    [/claude-opus-5[.-]5(?:-(?:high|xhigh|max))?$/,'claude-opus-5.5'],
+    [/claude-opus-5(?:-(?:high|xhigh|max))?$/,'claude-opus-5'],
+    [/claude-sonnet-5[.-]5(?:-(?:high|xhigh|max))?$/,'claude-sonnet-5.5'],
+    [/claude-sonnet-5(?:-(?:high|xhigh|max))?$/,'claude-sonnet-5'],
+    [/deepseek-v4[.-]1-flash(?:-(?:0731|0813|0910|1017))?$/,'deepseek-v4.1-flash'],
+    [/deepseek-v4-pro(?:-(?:0731|0813|0910|1017))?$/,'deepseek-v4-pro']
+  ];
+  for (const [re,id] of patterns) {
+    const match=re.exec(s);
+    if(match && (match.index===0 || /[^a-z0-9]/.test(s[match.index-1])))
+      return id;
+  }
+  return null;
+}
+function priceKey(r) {
+  const num=v=>v==null?'':String(Number(Number(v).toPrecision(12)));
+  return [
+    stationKey(r.station_name),
+    String(r.model_name).normalize('NFKC').trim().toLowerCase(),
+    r.billing_type,r.unit,
+    num(r.price_per_call),num(r.price_input),num(r.price_output),
+    num(r.price_cache_read),num(r.price_cache_write)
+  ].join('\u001f');
+}
+function filterAndDeduplicate(raw) {
+  const offers=new Map();
+  for (const r of raw) {
+    if(r.family==='deepseek-v4-flash')continue;
+    const family=familyOf(r.model_name);
+    if(!family || !(global.SugarCatalogConfig&&SugarCatalogConfig.isLoaded())&&!FAMILIES.includes(family)) continue;
+    if(!['per_call','per_token','dynamic'].includes(r.billing_type))continue;
+    const normalized={...r,family};
+    const identity=priceKey(normalized);
+    const existing=offers.get(identity);
+    // Same model at exactly the same effective price in several groups is
+    // one choice; prefer the ungrouped/default row when one exists.
+    if(!existing || (!normalized.group_name && existing.group_name))
+      offers.set(identity,normalized);
+  }
+  return [...offers.values()];
+}
+
+function pricesFor(name) {
+  const id = stationKey(name);
+  return rows.filter(r => stationKey(r.station_name) === id);
+}
+function countStation(name) {
+  return pricesFor(name).length;
+}
+function renderStation(name) {
+  const group = stationKey(name);
+  const stationRows = pricesFor(name);
+  const error = errors[group];
+  if (!stationRows.length && !error) return '';
+  const families=global.SugarCatalogConfig&&SugarCatalogConfig.isLoaded()?SugarCatalogConfig.getFamilies().map(x=>x.family_key):FAMILIES;
+  const html = families.map(family => {
+    const subset = stationRows.filter(r => r.family === family);
+    if (!subset.length) return '';
+    const section = (billingType, title) => {
+      const filtered = subset.filter(r => r.billing_type === billingType ||
+        (billingType === 'per_token' && r.billing_type === 'dynamic')).sort((a,b) =>
+        billingType === 'per_call'
+          ? Number(a.price_per_call) - Number(b.price_per_call)
+          : Number(a.price_output) - Number(b.price_output) ||
+            Number(a.price_input) - Number(b.price_input));
+      if (!filtered.length) return '';
+      return '<details class="sugar-model-billing" data-sugar-open-id="billing:' +
+        esc(family) + ':' + billingType + '"><summary>' + title +
+        '（' + filtered.length + '）</summary>' +
+        filtered.map(r => {
+          // model_name already contains its source/channel prefix, e.g.
+          // [官逆]gemini..., so don't prepend channel_name a second time.
+          // Show group only if the same model has a *different priced* option.
+          const variants = filtered.filter(x => x.model_name === r.model_name).length;
+          const groupLabel = variants > 1 && r.group_name
+            ? '['+esc(r.group_name)+'] ' : '';
+          const label = groupLabel + esc(r.model_name);
+          const amount = billingType === 'per_call'
+            ? '¥' + fmt(r.price_per_call) + '/次'
+            : '输出 ¥' + fmt(r.price_output);
+          return '<div class="sugar-price-entry"><span class="sugar-price-name">' +
+            label + '</span><span class="sugar-price-amount">' + amount + '</span></div>';
+        }).join('') + '</details>';
+    };
+    return '<details class="sugar-model-family" data-sugar-open-id="family:' +
+      esc(family) + '"><summary>' + esc(family) + '（' + subset.length + '）</summary>' +
+      section('per_call','按次 · 元/次') +
+      section('per_token','按量 · 元/百万 Token') + '</details>';
+  }).join('');
+  return html + (error
+    ? '<div class="sugar-price-alert">本次更新失败：' + esc(error) +
+      (stationRows.length ? '（已保留旧报价）' : '') + '</div>' : '');
+}
+function notify(message) {
+  lastNotice = message;
+  const button = document.getElementById('sugar-price-update');
+  if (button) {
+    button.title = message;
+    button.setAttribute('aria-label','更新价格。'+message);
+  }
+}
+function repaint() {
+  if (typeof global.r_paint === 'function') global.r_paint();
+}
+async function readCatalog() {
+  if (!url || !key || !global.SugarAuth || !SugarAuth.hasSession(url)) return;
+  const version = ++generation, accumulated = [];
+  try {
+    // PostgREST can limit pages to 1000 rows; query all pages to avoid dropping
+    // any station's prices when the catalog grows.
+    for (let offset = 0; offset < 10000; offset += 1000) {
+      const path = '/rest/v1/hsb_model_price_catalog?select=station_name,family,model_name,channel_name,group_name,billing_type,price_per_call,price_input,price_output,price_cache_read,price_cache_write,unit,collected_at' +
+        '&order=station_name.asc,model_name.asc,group_name.asc,billing_type.asc' +
+        '&limit=1000&offset=' + offset;
+      const resp = await SugarAuth.authorizedFetch(url,key,path,{method:'GET',cache:'no-store'});
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.message || String(resp.status));
+      if (!Array.isArray(json)) throw new Error('定价目录响应格式异常');
+      accumulated.push(...json);
+      if (json.length < 1000) break;
+    }
+    if (version !== generation) return;
+    rows = filterAndDeduplicate(accumulated);
+    dataLoaded = true;
+    repaint();
+    if (global.SugarCompare && typeof global.SugarCompare.render === 'function')
+      global.SugarCompare.render();
+    if (!loading) notify('已加载 ' + rows.length + ' 条站点报价，全部金额按人民币计算。');
+  } catch(e) {
+    if (version !== generation) return;
+    notify('读取模型报价失败：'+(e.message||e));
+  }
+}
+async function replaceStation(station, data) {
+  const response = await SugarAuth.authorizedFetch(url,key,
+    '/rest/v1/rpc/rpc_replace_station_model_prices',
+    {method:'POST',cache:'no-store',body:JSON.stringify({p_station_name:station,p_rows:data})});
+  if (!response.ok) {
+    const json = await response.json().catch(() => ({}));
+    throw new Error(json.message || '报价入库失败 HTTP ' + response.status);
+  }
+}
+async function sync() {
+  if (loading || !url || !key || !global.SugarAuth || !SugarAuth.hasSession(url)) {
+    if (!loading) notify('请先登录 Supabase 账户，再更新模型报价。');
+    return;
+  }
+  const button = document.getElementById('sugar-price-update');
+  loading = true;
+  if (button) { button.disabled = true; button.textContent = '🔄 更新中…'; }
+  let success = 0, done = 0, added = 0, next = 0;
+  const failures = {};
+  const activeUrl = url;
+  const c=global.SugarCatalogConfig;
+  const sourceList=c&&c.isLoaded()?c.getSources().filter(x=>x.collection_mode==='newapi'&&x.auto_sync):[];
+  try {
+    async function worker() {
+      while (next < sourceList.length) {
+        const entry=sourceList[next++];
+        const site=entry.site_key;
+        if (url !== activeUrl) break;
+        notify('正在更新 ' + (done+1) + '/' + sourceList.length + ' 站；非公开站点由独立采集端维护');
+        try {
+          const response = await SugarAuth.authorizedFetch(url,key,
+            '/functions/v1/pricing-sync',
+            {method:'POST',cache:'no-store',body:JSON.stringify({site})});
+          const json = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(json.error || String(response.status));
+          if (!Array.isArray(json.rows) || json.site !== entry.station_name || json.rows.length===0) {
+            throw new Error('价格接口返回格式不正确');
+          }
+          await replaceStation(json.site, json.rows);
+          success++;
+          added += json.rows.length;
+        } catch(e) {
+          failures[site] = String(e.message || e);
+        }
+        done++;
+      }
+    }
+    await Promise.all([worker(),worker()]);
+    if (url !== activeUrl) return;
+    errors = failures;
+    await readCatalog();
+    repaint();
+    const countFailed = Object.keys(failures).length;
+    notify('公开接口更新成功 ' + success + '/' + sourceList.length + ' 站，入库 ' + added + ' 条；非公开站点由独立采集端维护，不覆盖' +
+      (countFailed ? '。失败：' +
+        Object.entries(failures).map(([id,reason]) => (sourceList.find(x=>x.site_key===id)?.display_name||LABELS[id]||id)+' '+reason).join('；') : '。'));
+  } catch(e) {
+    notify('价格更新异常：'+(e.message||e));
+  } finally {
+    loading = false;
+    if (button) { button.disabled = false; button.textContent = '🔄 更新价格'; }
+  }
+}
+function load(nextUrl,nextKey) {
+  if (!nextUrl || !nextKey) return;
+  const normalized = String(nextUrl).trim().replace(/\/+$/,'');
+  const changed = url !== normalized || key !== nextKey;
+  if (changed) {
+    url = normalized;
+    key = nextKey;
+    rows = [];
+    errors = {};
+    dataLoaded = false;
+    ++generation;
+  }
+  if (!global.SugarAuth || !SugarAuth.hasSession(url)) return;
+  if(global.SugarCatalogConfig&&!SugarCatalogConfig.isLoaded())SugarCatalogConfig.load(url,key);
+  if (!dataLoaded && !loading) readCatalog();
+  let last = 0;
+  try { last = Number(localStorage.getItem(LAST_KEY)||0); } catch(e) {}
+  if (!loading && Date.now()-last >= 86400000) {
+    try { localStorage.setItem(LAST_KEY,String(Date.now())); } catch(e) {}
+    sync();
+  }
+  if (lastNotice) notify(lastNotice);
+}
+function clear() {
+  ++generation;
+  rows = [];
+  errors = {};
+  url = ''; key = ''; dataLoaded = false;
+  if(global.SugarCatalogConfig)SugarCatalogConfig.clear();
+  notify('请先登录账户查看模型定价。');
+  if (global.SugarCompare && typeof global.SugarCompare.clear === 'function')
+    global.SugarCompare.clear();
+}
+global.SugarPricing = {
+  load,clear,refresh:sync,renderStation,countStation,
+  // Read-only helpers for isolated browser tests.
+  stationKey,
+  getRows: function () { return rows.map(function(r){ return Object.assign({},r); }); },
+  reloadCatalog: function () { return readCatalog(); },
+  isLoaded: function () { return dataLoaded; },
+  getConnection:()=>url&&key?{url,key}:null
+};
+})(window);
+
+</script>
+<script>
+/* Global model price comparison: read-only Supabase RLS catalog view. */
+(function(global){
+'use strict';
+const FAMILIES=['gemini-3.7-flash','gemini-3.8-flash','gemini-4-Argon',
+  'claude-opus-5.5','claude-opus-5','claude-sonnet-5.5','claude-sonnet-5',
+  'deepseek-v4.1-flash','deepseek-v4-pro'];
+const SITES={};
+const collate=new Intl.Collator('zh-CN',{numeric:true,sensitivity:'base'});
+const names={price:'价格',website:'网站',channel:'渠道'};
+const allowedFields=['price_per_call','price_input','price_output','price_cache_read','price_cache_write','model_name','station_name','channel_name','collected_at'];
+function optionList(){const cfg=global.SugarCatalogConfig;return cfg&&cfg.isLoaded()?cfg.getSorts().filter(x=>allowedFields.includes(x.sort_field)):[];}
+function labelFor(id){return optionList().find(x=>x.sort_key===id)?.display_name||names[id]||id;}
+let sort='price',direction=1,billing='per_call',active=false,prefsApplied=false;
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
+const numeric=v=>v===null||v===undefined||v===''?null:Number(v);
+const fmt=v=>{const n=numeric(v);return n===null||!Number.isFinite(n)?'—':String(Number(n.toFixed(8)));};
+// Display-only rounding: no changes to the stored prices or sorting precision.
+const fmtTwo=v=>{
+  const n=numeric(v);
+  if(n===null||!Number.isFinite(n))return '—';
+  return (Math.round((n+Number.EPSILON*Math.max(1,Math.abs(n)))*100)/100).toFixed(2);
+};
+const siteName=r=>{const c=global.SugarCatalogConfig;if(c&&c.isLoaded()){const s=c.getSources().find(x=>x.station_name===r.station_name);if(s)return s.display_name;}return SITES[r.station_name]||String(r.station_name||'未知站点');};
+// Canonical channel identity is only used for sorting; visible model names
+// and user-entered site naming conventions are preserved exactly.
+// Display order is fixed; the last three named channels are a lower
+// recognition tier than all seven major providers, regardless of position.
+const CHANNELS=[
+  {key:'vertex',label:'Vertex',regex:/vertex|ver|vt/g},
+  {key:'ais',label:'Aistudio',regex:/aistudio|ais/g},
+  {key:'anti',label:'反重力',regex:/antigravity|反重力|anti|ant/g},
+  {key:'kiro',label:'Kiro',regex:/kiro/g},
+  {key:'cc',label:'ClaudeCode',regex:/claudecode|claude[\s._-]*code|cc|cl/g},
+  {key:'aws',label:'AWS',regex:/aws/g},
+  {key:'official',label:'官渠',regex:/官渠|官转|官方|官/g},
+  {key:'forward',label:'正向',regex:/正向/g,minor:true},
+  {key:'reverse',label:'逆向',regex:/逆向|逆/g,minor:true},
+  {key:'bojia',label:'薄甲',regex:/薄甲/g,minor:true}
+];
+const CHANNEL_ORDER=['vertex','ais','anti','kiro','cc','aws','official','forward','reverse','bojia'];
+function channelText(r){
+  // Station-provided "channel_name" can be "按量"/"0.04", so also inspect
+  // the real model prefix, stopping before the requested model family.
+  const model=String(r.model_name||'').normalize('NFKC');
+  const cut=model.search(/gemini[\s._-]*\d|claude[\s._-]*(?:opus|sonnet)|deepseek/i);
+  const prefix=cut<0?'':model.slice(0,cut);
+  const hint=String(r.channel_name||'').normalize('NFKC');
+  return {prefix,hint};
+}
+function recognizeAll(raw){
+  const s=String(raw||'').normalize('NFKC').toLowerCase();
+  const candidates=[];
+  const cfg=global.SugarCatalogConfig;
+  const options=cfg&&cfg.isLoaded()?cfg.getChannels().filter(x=>x.channel_key!=='other').map(x=>({key:x.channel_key,label:x.display_name,minor:Number(x.priority_tier)>0,aliases:x.aliases})):CHANNELS;
+  for(const entry of options){
+    const escaped=(Array.isArray(entry.aliases)?entry.aliases:[]).filter(x=>typeof x==='string'&&x.length&&x.length<48).map(x=>Array.from(x).map(ch=>'\\.^$*+?()[]{}|'.includes(ch)?String.fromCharCode(92)+ch:ch).join('')).sort((a,b)=>b.length-a.length);
+    const matcher=entry.regex||new RegExp(escaped.join('|')||'(?!)','gi');
+    matcher.lastIndex=0;
+    let m;
+    while((m=matcher.exec(s))){
+      const begin=m.index,finish=begin+m[0].length;
+      const before=s.slice(Math.max(0,begin-1),begin);
+      const after=s.slice(finish);
+      // Boundaries are for Latin alias fragments only: Chinese channel
+      // names may be followed immediately by an English channel name.
+      if(/[a-z]/.test(before))continue;
+      if(!/[\u3400-\u9fff]/.test(m[0]) && /^[a-z]/.test(after)){
+        const allowed=
+          (entry.key==='cc'&&/^max(?:[^a-z]|$)/.test(after))||
+          (entry.key==='aws'&&/^b(?:[^a-z]|$)/.test(after));
+        if(!allowed)continue;
+      }
+      candidates.push({
+        key:entry.key,label:entry.label,minor:!!entry.minor,
+        pos:begin,length:m[0].length
+      });
+    }
+  }
+  return candidates;
+}
+function channelGroup(r){
+  const {prefix,hint}=channelText(r);
+  // H/HL/KE are site-defined custom routing codes, not reliable channels.
+  if(/^\s*(?:H|HL|KE)\s*(?=[\[【])/i.test(prefix))
+    return {key:'other',label:'其他',other:true};
+  const candidates=[
+    ...recognizeAll(prefix).map(x=>({...x,source:0})),
+    ...recognizeAll(hint).map(x=>({...x,source:1}))
+  ];
+  // Major channels always beat 薄甲/正向/逆向, even if mentioned later.
+  // Within the same tier the first named channel wins; then prefer model
+  // prefix over channel_name, which can be a generic pricing label.
+  candidates.sort((a,b)=>Number(a.minor)-Number(b.minor)||
+    a.source-b.source||a.pos-b.pos||b.length-a.length);
+  const first=candidates[0];
+  return first?{key:first.key,label:first.label,other:false}
+    :{key:'other',label:'其他',other:true};
+}
+function channelName(r){return channelGroup(r).label;}
+function price(r){
+  const n=numeric(billing==='per_call'?r.price_per_call:r.price_output);
+  return n!==null&&Number.isFinite(n)&&n>=0?n:Infinity;
+}
+const tie=(a,b)=>collate.compare(siteName(a),siteName(b))||
+  collate.compare(channelName(a),channelName(b))||
+  collate.compare(String(a.model_name),String(b.model_name));
+function sortedFor(family){
+  const all=global.SugarPricing&&SugarPricing.getRows?SugarPricing.getRows():[];
+  // Dynamic offers remain separately typed in Supabase but share the
+  // per-token comparison table. No third filter is displayed.
+  const list=all.filter(r=>r.family===family&&
+    (r.billing_type===billing||(billing==='per_token'&&r.billing_type==='dynamic'))&&
+    Number.isFinite(price(r)));
+  const custom=optionList().find(x=>x.sort_key===sort);
+  if(custom&&sort!=='price'&&sort!=='website'&&sort!=='channel'){
+    const f=custom.sort_field; const value=x=>x[f];
+    if(custom.sort_kind==='text'||custom.sort_kind==='group')return list.sort((a,b)=>direction*collate.compare(String(value(a)||''),String(value(b)||''))||price(a)-price(b)||tie(a,b));
+    if(custom.sort_kind==='aggregate'){
+      const group=allowedFields.includes(custom.group_field)?custom.group_field:'station_name';
+      const buckets=new Map();list.forEach(r=>{const k=String(r[group]||'');if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(Number(value(r)));});
+      const aggregate=r=>{const v=(buckets.get(String(r[group]||''))||[]).filter(Number.isFinite);if(!v.length)return Infinity;if(custom.aggregate_function==='max')return Math.max(...v);if(custom.aggregate_function==='avg')return v.reduce((s,x)=>s+x,0)/v.length;return Math.min(...v);};
+      return list.sort((a,b)=>direction*(aggregate(a)-aggregate(b))||price(a)-price(b)||tie(a,b));
+    }
+    return list.sort((a,b)=>direction*(Number(value(a)??Infinity)-Number(value(b)??Infinity))||tie(a,b));
+  }
+  if(sort==='price')return list.sort((a,b)=>direction*(price(a)-price(b))||tie(a,b));
+  if(sort==='website'){
+    const minimum=new Map();
+    list.forEach(r=>{
+      const s=siteName(r);
+      minimum.set(s,Math.min(minimum.has(s)?minimum.get(s):Infinity,price(r)));
+    });
+    return list.sort((a,b)=>
+      direction*(minimum.get(siteName(a))-minimum.get(siteName(b)))||
+      direction*collate.compare(siteName(a),siteName(b))||
+      price(a)-price(b)||tie(a,b));
+  }
+  return list.sort((a,b)=>{
+    const ga=channelGroup(a),gb=channelGroup(b);
+    // Unknown/unlabeled models always come LAST and are sorted strictly
+    // by ascending price rather than by an arbitrary opaque channel name.
+    if(ga.other!==gb.other)return ga.other?1:-1;
+    if(!ga.other&&ga.key!==gb.key)
+      {const c=global.SugarCatalogConfig;const order=c&&c.isLoaded()?c.getChannels().map(x=>x.channel_key):CHANNEL_ORDER;return direction*(order.indexOf(ga.key)-order.indexOf(gb.key));}
+    return price(a)-price(b)||tie(a,b);
+  });
+}
+function priceCells(r){
+  if(billing==='per_call')return ['¥'+fmt(r.price_per_call)+'/次'];
+  // Read/write pricing = input/output; cache is a separate column.
+  const cacheRead=numeric(r.price_cache_read);
+  const cacheWrite=numeric(r.price_cache_write);
+  const hasRead=cacheRead!==null&&Number.isFinite(cacheRead);
+  const hasWrite=cacheWrite!==null&&Number.isFinite(cacheWrite);
+  const cache=hasRead&&hasWrite
+    ?'读'+fmtTwo(cacheRead)+' / 写'+fmtTwo(cacheWrite)
+    :hasRead?'缓'+fmtTwo(cacheRead)
+    :hasWrite?'缓'+fmtTwo(cacheWrite)
+    :'-';
+  return ['入'+fmtTwo(r.price_input)+' / 出'+fmtTwo(r.price_output),cache];
+}
+function modelLabel(r,list){
+  const variations=list.filter(x=>x.station_name===r.station_name&&
+    x.model_name===r.model_name&&x.billing_type===r.billing_type).length;
+  return (variations>1&&r.group_name?'['+r.group_name+'] ':'')+r.model_name;
+}
+function sortLabel(){
+  if(sort==='channel')return '渠道 · '+(direction===1?'默认分组顺序 ↑':'反向分组顺序 ↓')+'（未识别渠道末尾按低价排序）';
+  return (sort==='website'?'网站最低价':labelFor(sort))+
+    (direction===1?' · 从低到高 ↑':' · 从高到低 ↓');
+}
+function render(){
+  if(!active)return;
+  const config=global.SugarCatalogConfig;
+  if(!prefsApplied&&config&&config.isLoaded()){
+    prefsApplied=true;
+    const prefs=config.getPreferences();
+    const find=k=>prefs.find(x=>x.pref_key===k)?.pref_value;
+    const chosen=find('default_sort');
+    const chosenBilling=find('default_billing');
+    if(typeof chosen==='string'&&(Object.prototype.hasOwnProperty.call(names,chosen)||optionList().some(x=>x.sort_key===chosen)))sort=chosen;
+    if(chosenBilling==='per_call'||chosenBilling==='per_token')billing=chosenBilling;
+    const chosenTheme=find('theme');
+    const page=document.getElementById('page-compare');
+    if(page&&(chosenTheme==='dark'||chosenTheme==='light'))page.classList.toggle('dark',chosenTheme==='dark');
+  }
+  const root=document.getElementById('global-compare-content');
+  if(!root)return;
+  const opened=new Set(Array.from(root.querySelectorAll('details[data-family][open]'))
+    .map(d=>d.getAttribute('data-family')));
+  const label=document.getElementById('global-compare-sort-status');
+  if(label)label.textContent='当前排序：'+sortLabel()+'（'+(billing==='per_call'?'按次':'按量')+'）';
+  const area=document.querySelector('#page-compare .global-compare-filter[aria-label="排序方式"]');
+  const custom=optionList();
+  if(area&&custom.length){if(!custom.some(x=>x.sort_key===sort)){sort=custom[0].sort_key;direction=1;}
+   area.innerHTML=custom.map(x=>'<button type="button" data-sort="'+esc(x.sort_key)+'">'+esc(x.display_name)+'</button>').join('');
+   area.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>chooseSort(b.getAttribute('data-sort'))));
+  }
+  document.querySelectorAll('#page-compare button[data-sort]').forEach(b=>{
+    const selected=b.getAttribute('data-sort')===sort;
+    b.classList.toggle('active',selected);
+    b.setAttribute('aria-pressed',String(selected));
+    b.textContent=labelFor(b.getAttribute('data-sort'))+(selected?(direction===1?' ↑':' ↓'):'');
+  });
+  document.querySelectorAll('#page-compare button[data-billing]').forEach(b=>{
+    const selected=b.getAttribute('data-billing')===billing;
+    b.classList.toggle('active',selected);
+    b.setAttribute('aria-pressed',String(selected));
+  });
+  const hideCache=global.SugarCatalogConfig&&SugarCatalogConfig.isLoaded()&&SugarCatalogConfig.getUI().some(x=>x.config_key==='hide_cache'&&x.config_value?.enabled===true);
+  root.classList.toggle('sugar-hide-cache',hideCache);
+  const loaded=global.SugarPricing&&SugarPricing.isLoaded();
+  let total=0;
+  const c=global.SugarCatalogConfig;const families=c&&c.isLoaded()?c.getFamilies().map(x=>x.family_key):FAMILIES;
+  root.innerHTML=families.map(family=>{
+    const rows=sortedFor(family);
+    total+=rows.length;
+    const volume=billing!=='per_call';
+    const rowHtml=r=>{
+      const cells=priceCells(r);
+      return '<tr><td class="global-compare-site">'+esc(siteName(r))+
+        '</td><td class="global-compare-model">'+esc(modelLabel(r,rows))+
+        '</td><td class="global-compare-price">'+esc(cells[0])+'</td>'+
+        (volume?'<td class="global-compare-cache">'+esc(cells[1])+'</td>':'')+
+        '</tr>';
+    };
+    // Channel sort: add one prominent, accessible heading per canonical group.
+    // The remaining unknown or site-specific channels form one final "其他"
+    // group, ordered by price. Other sort modes remain plain tables.
+    let bodies;
+    if(sort==='channel'){
+      const groups=[];
+      rows.forEach(r=>{
+        const group=channelGroup(r);
+        let current=groups[groups.length-1];
+        if(!current||current.key!==group.key){
+          current={key:group.key,label:group.other?'其他':group.label,items:[]};
+          groups.push(current);
+        }
+        current.items.push(r);
+      });
+      bodies=groups.map(g=>
+        '<tbody class="global-compare-channel-block">'+
+        '<tr class="global-compare-channel-divider"><th scope="rowgroup" colspan="'+
+        (volume?4:3)+'"><span class="global-compare-channel-name">'+esc(g.label)+
+        '</span><span class="global-compare-channel-count">'+g.items.length+' 条</span></th></tr>'+
+        g.items.map(rowHtml).join('')+'</tbody>'
+      ).join('');
+    }else{
+      bodies='<tbody>'+rows.map(rowHtml).join('')+'</tbody>';
+    }
+    // Token columns need sufficient room for "入XXX.XX / 出XXX.XX"
+    // and "读XXX.XX / 写XXX.XX"; the model receives the remainder.
+    const cols=volume
+      ?'<colgroup><col class="global-compare-col-site"><col class="global-compare-col-model"><col class="global-compare-col-token"><col class="global-compare-col-cache"></colgroup>'
+      :'<colgroup><col style="width:15%"><col style="width:67%"><col style="width:18%"></colgroup>';
+    const heads=volume
+      ?'<th scope="col">读写价</th><th scope="col">缓存价</th>'
+      :'<th scope="col">价格</th>';
+    return '<details class="global-compare-family" data-family="'+esc(family)+'"'+
+      (opened.has(family)?' open':'')+'><summary>'+esc(family)+
+      '<span class="global-compare-count">（'+rows.length+'）</span></summary>'+
+      (rows.length?'<table class="global-compare-table '+
+      (volume?'global-compare-table-volume':'global-compare-table-call')+'">'+cols+
+      '<thead><tr><th scope="col">站名</th>'+
+      '<th scope="col">模型</th>'+heads+'</tr></thead>'+bodies+'</table>':
+      '<div class="global-compare-empty">暂无'+(billing==='per_call'?'按次':'按量')+'报价</div>')+
+      '</details>';
+  }).join('');
+  const notice=document.getElementById('global-compare-notice');
+  if(notice)notice.textContent=!loaded?
+    '正在读取报价；如未加载，请检查 Supabase 登录和中转站连接配置。':
+    '已读取 '+total+' 条'+(billing==='per_call'?'按次':'按量')+
+    '报价；自动采集站点可在中转站账本更新，其他来源按各自配置同步。';
+}
+function chooseSort(next){
+  if(!Object.prototype.hasOwnProperty.call(names,next)&&!optionList().some(x=>x.sort_key===next))return;
+  if(sort===next)direction=-direction;
+  else{sort=next;direction=optionList().find(x=>x.sort_key===next)?.ascending===false?-1:1;}
+  render();
+}
+function chooseBilling(next){
+  if(next!=='per_call'&&next!=='per_token')return;
+  billing=next;
+  render();
+}
+function activate(){
+  active=true;render();
+  if(global.SugarPricing&&SugarPricing.getConnection&&global.SugarCatalogConfig){const c=SugarPricing.getConnection();if(c)SugarCatalogConfig.load(c.url,c.key).catch(()=>{});}
+  if(global.SugarPricing&&SugarPricing.reloadCatalog)
+    SugarPricing.reloadCatalog().catch(()=>{});
+}
+function deactivate(){active=false;}
+function clear(){prefsApplied=false;if(active)render();}
+function theme(){
+  const page=document.getElementById('page-compare');
+  if(!page)return;
+  const dark=page.classList.toggle('dark');
+  const icon=document.getElementById('global-compare-theme');
+  if(icon)icon.textContent=dark?'🌙':'☀️';
+  try{localStorage.setItem('theme',dark?'dark':'light');}catch(e){}
+}
+function init(){
+  const page=document.getElementById('page-compare');
+  if(!page)return;
+  try{
+    const dark=localStorage.getItem('theme')==='dark';
+    page.classList.toggle('dark',dark);
+    const icon=document.getElementById('global-compare-theme');
+    if(icon)icon.textContent=dark?'🌙':'☀️';
+  }catch(e){}
+}
+global.SugarCompare={activate,deactivate,render,chooseSort,chooseBilling,clear,theme,sortedFor,channelGroup};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})(window);
+
+</script>
+<script>function switchPage(name){
+  if(name!=='relay' && name!=='compare')name='relay';
+  for(const page of ['relay','compare']){
+    document.getElementById('page-'+page).hidden=(page!==name);
+    document.getElementById('tab-'+page).classList.toggle('active',page===name);
+  }
+  if(window.SugarCompare){
+    if(name==='compare')SugarCompare.activate();
+    else SugarCompare.deactivate();
+  }
+  try{history.replaceState(null,'','#'+name)}catch(_){ }
+  window.scrollTo(0,0);
+}
+function showConverterPlaceholder(){
+  const dialog=document.getElementById('converter-placeholder');
+  if(dialog.showModal)dialog.showModal();else dialog.hidden=false;
+}
+function closeConverterPlaceholder(){const d=document.getElementById('converter-placeholder');if(d.close)d.close();else d.hidden=true;}
+window.addEventListener('DOMContentLoaded',()=>{
+  const fragment=(location.hash||'').slice(1);
+  if(fragment==='compare')switchPage('compare');
+});
+function r_tg(){var s=document.getElementById('page-relay'),d=s.classList.toggle('dark');document.getElementById('rti').textContent=d?'🌙':'☀️';try{localStorage.setItem('theme',d?'dark':'light')}catch(e){}}
+(function(){var dark=false;try{dark=localStorage.getItem('theme')==='dark'}catch(e){}if(dark){document.getElementById('page-relay').classList.add('dark');document.getElementById('rti').textContent='🌙'}})();
+
+function r_fm(n,d){if(n===null||n===undefined||isNaN(n)||!isFinite(n))return null;return parseFloat(n.toFixed(d===undefined?4:d))}
+
+// 昨天的日期字符串（YYYY-MM-DD），和 main.js 里 todayStr(-1) 用的是同一套算法，
+// 保证前端筛选"昨日"记录时和写入流水时用的日期基准一致。
+function ydStr(){
+  var d=new Date();
+  d.setDate(d.getDate()-1);
+  var y=d.getFullYear();
+  var m=String(d.getMonth()+1).padStart(2,'0');
+  var day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+
+async function r_sbFetch(url,key,path,opts){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),12000);
+  let res;
+  try{
+    res=await SugarAuth.authorizedFetch(url,key,path,Object.assign({cache:'no-store',signal:controller.signal},opts||{}));
+  }catch(e){
+    if(e.name==='AbortError') throw new Error('请求超时（12秒未返回），请检查网络或稍后重试');
+    throw e;
+  }finally{ clearTimeout(timer) }
+  if(!res.ok) throw new Error('请求失败: '+res.status);
+  return res.json();
+}
+
+async function r_sbRpc(url,key,fn,args){
+  return r_sbFetch(url,key,`/rest/v1/rpc/${fn}`,{method:'POST',body:JSON.stringify(args||{})});
+}
+
+// 折中单价计算，优先读正式字段，只有正式字段为空时才退回解析备注：
+// 1) 正式字段（第一优先）：正常单价 = normal_recharge_amount / normal_received_quota；
+//    实际单价 = recharge_amount / received_quota（实际充值那一笔）；
+//    折中单价直接用 effective_price_per_quota（数据库已按
+//    「正常价与实际价取平均、只有一种价就用它」算好），折合人民币也用它算。
+// 2) 正式字段缺失时的旧兼容字段：normal_quota_per_yuan / normal_unit_price。
+// 3) 以上都没有时，才退回原来解析备注的方法：读备注里「正常1:200」这类字样，
+//    折中单价 =(正常单价+实际单价)/2，折中折扣 = 折中单价/正常单价。
+// 备注写了未充值时，存的那对充值数本身就是正常价占位（例如 1元兑200额度），不算实际充值，
+// 纯正常价不产生任何折扣（例如单价为1元或0.005元）。
+function r_priceInfo(s){
+  const hasNum=function(v){return v!==null&&v!==undefined&&v!==''&&Number(v)>0;};
+  let normalUnit=null, actualUnit=null, effectiveUnit=null;
+  // —— 第一优先：正式字段 ——
+  if(hasNum(s.normal_recharge_amount)&&hasNum(s.normal_received_quota)) normalUnit=Number(s.normal_recharge_amount)/Number(s.normal_received_quota);
+  if(hasNum(s.recharge_amount)&&hasNum(s.received_quota)) actualUnit=Number(s.recharge_amount)/Number(s.received_quota);
+  if(hasNum(s.effective_price_per_quota)) effectiveUnit=Number(s.effective_price_per_quota);
+  // —— 第二优先：旧兼容字段（仅当正式字段没给出正常价时） ——
+  if(normalUnit===null){
+    if(hasNum(s.normal_quota_per_yuan)) normalUnit=1/Number(s.normal_quota_per_yuan);
+    else if(hasNum(s.normal_unit_price)) normalUnit=Number(s.normal_unit_price);
+  }
+  const note=s.note||'';
+  // —— 第三优先：解析备注（仅当正式/兼容字段都没给出正常价时才用，解析逻辑保留不删） ——
+  if(normalUnit===null&&note){
+    const m=note.match(/正常\s*(?:价格|比例|价)?\s*1\s*(?:元)?\s*[:：=]\s*([0-9]+(?:\.[0-9]+)?)/);
+    if(m&&parseFloat(m[1])>0) normalUnit=1/parseFloat(m[1]);
+    else{const m2=note.match(/正常单价\s*(?:为|是)?\s*([0-9]+(?:\.[0-9]+)?)\s*元/);if(m2) normalUnit=parseFloat(m2[1]);}
+  }
+  if(/未充值|没充过|未充过|没充|一分钱没充/.test(note)){ if(normalUnit===null) normalUnit=actualUnit; actualUnit=null; }
+  // 折中单价：有 effective_price_per_quota 就直接用它；没有才按 (正常+实际)/2 或单一价格算。
+  let blendedUnit=null,discount=null;const hasBoth=normalUnit!==null&&actualUnit!==null;
+  if(effectiveUnit!==null){blendedUnit=effectiveUnit;if(normalUnit!==null) discount=blendedUnit/normalUnit;}
+  else if(hasBoth){blendedUnit=(normalUnit+actualUnit)/2;discount=blendedUnit/normalUnit;}
+  else if(normalUnit!==null) blendedUnit=normalUnit;
+  else if(actualUnit!==null) blendedUnit=actualUnit;
+  return {normalUnit,actualUnit,blendedUnit,discount,hasBoth};
+}
+
+function estimateRemainingDays(station,txs){
+  if(!txs||!txs.length) return null;
+  const total=txs.reduce((s,t)=>s+(t.consumed_quota||0),0);
+  const days=new Set(txs.map(t=>t.record_date)).size||1;
+  const dailyAvg=total/days;
+  return dailyAvg>0 ? (station.current_balance||0)/dailyAvg : null;
+}
+
+// 单模型推算：只用「当前余额 + 这个模型自己的历史流水 + 这个模型的定价」现算，
+// 纯前端计算，不写回 Supabase，也不新增任何表。
+function estimatePerModel(model, station, txs){
+  const bal = station.current_balance || 0;
+  const modelTxs = (txs||[]).filter(t => t.model_name === model.model_name);
+  let remainingCalls = null, remainingDays = null;
+  if (model.pricing_type === 'per_call' && model.per_call_price > 0) {
+    remainingCalls = bal / model.per_call_price;
+  }
+  if (modelTxs.length) {
+    const totalQuota = modelTxs.reduce((s,t)=>s+(t.consumed_quota||0),0);
+    const totalCalls = modelTxs.reduce((s,t)=>s+(t.call_count||0),0);
+    const activeDays = new Set(modelTxs.map(t=>t.record_date)).size || 1;
+    const dailyAvg = totalQuota/activeDays;
+    if (dailyAvg>0) remainingDays = bal/dailyAvg;
+    if (remainingCalls===null && totalCalls>0 && totalQuota>0) {
+      remainingCalls = bal / (totalQuota/totalCalls);
+    }
+  }
+  return { remainingCalls, remainingDays, hasHistory: modelTxs.length>0 };
+}
+
+// ===== 总余额卡天数列表折叠 + 站点卡片排序（仅页面内状态，不保存到服务器/本地） =====
+var r_daysCollapsed=true;
+var r_sortKey='balance';
+var r_sortDir=-1; // -1 = 从大到小（逆序），1 = 从小到大（正序）
+var r_cachedViews=null;
+var r_cachedMeta=null;
+var r_loadEpoch=0;
+
+// Authentication changes invalidate in-flight reads and any cached private data.
+window.addEventListener('sugar-auth-changed', function(e) {
+  var type=e.detail&&e.detail.type;
+  if(type==='login')r_render();
+  else if(type==='logout'){
+    ++r_loadEpoch;
+    r_cachedViews=null;
+    r_cachedMeta=null;
+    if(window.SugarPricing)SugarPricing.clear();
+    if(window.SugarCatalogConfig)SugarCatalogConfig.clear();
+    if(window.SugarCompare)SugarCompare.clear();
+    document.getElementById('root').innerHTML='<div class="empty">请登录 Supabase 账号后查看中转站</div>';
+  }
+});
+var R_SORT_DEFS=[
+  {key:'balance', label:'余额', defDir:-1},
+  {key:'rmb', label:'折合人民币', defDir:-1},
+  {key:'checkin', label:'今日签到', defDir:-1},
+  {key:'consumed', label:'昨日消耗', defDir:-1},
+  {key:'totalUsed', label:'累计用量', defDir:-1},
+  {key:'totalUsedRMB', label:'累计金额', defDir:-1},
+  {key:'name', label:'站名', defDir:1},
+  {key:'days', label:'剩余天数', defDir:1}
+];
+// ===== 最近流水显示天数设置（默认3天，保存在浏览器本地 localStorage） =====
+var R_TX_DAYS_KEY='hsb_recent_tx_days';
+var r_txDays=(function(){
+  var v=3;
+  try{ v=parseInt(localStorage.getItem(R_TX_DAYS_KEY),10); }catch(e){}
+  if(!v||isNaN(v)||v<1) v=3;
+  if(v>3650) v=3650;
+  return v;
+})();
+var r_txDaysDraft=null;
+function r_txCutoffStr(days){
+  var d=new Date();
+  d.setDate(d.getDate()-(days-1));
+  var y=d.getFullYear();
+  var m=String(d.getMonth()+1).padStart(2,'0');
+  var day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+function r_recentTxs(txs){
+  var cutoff=r_txCutoffStr(r_txDays);
+  return (txs||[]).filter(function(t){ return (t.record_date||'')>=cutoff; });
+}
+function r_openTxDays(ev){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  r_txDaysDraft=r_txDays;
+  var inp=document.getElementById('rtxCustom');
+  if(inp) inp.value=[3,7,14,30].indexOf(r_txDays)>=0?'':String(r_txDays);
+  document.getElementById('rtxMsg').textContent='';
+  r_paintTxPresets();
+  document.getElementById('rtxModal').style.display='flex';
+}
+function r_closeTxDays(){
+  document.getElementById('rtxModal').style.display='none';
+}
+function r_paintTxPresets(){
+  var btns=document.querySelectorAll('#rtxModal .txpreset');
+  for(var i=0;i<btns.length;i++){
+    btns[i].classList.toggle('active', parseInt(btns[i].getAttribute('data-days'),10)===r_txDaysDraft);
+  }
+}
+function r_pickTxDays(n){
+  if(n!==null&&n!==undefined){
+    r_txDaysDraft=n;
+    var inp=document.getElementById('rtxCustom');
+    if(inp) inp.value='';
+  }else{
+    var v=parseInt((document.getElementById('rtxCustom').value||''),10);
+    r_txDaysDraft=(v&&v>=1)?v:null;
+  }
+  document.getElementById('rtxMsg').textContent='';
+  r_paintTxPresets();
+}
+function r_saveTxDays(){
+  var v=r_txDaysDraft;
+  if(v===null||v===undefined){
+    v=parseInt((document.getElementById('rtxCustom').value||''),10);
+  }
+  if(!v||isNaN(v)||v<1||v>3650){
+    document.getElementById('rtxMsg').textContent='请输入 1 到 3650 之间的天数';
+    return;
+  }
+  r_txDays=Math.floor(v);
+  try{ localStorage.setItem(R_TX_DAYS_KEY,String(r_txDays)); }catch(e){}
+  r_closeTxDays();
+  r_paint();
+}
+function r_stationCurrency(s){
+  var m=String(s.note||'').match(/计价单位\s*([￥¥$])/);
+  return m?m[1]:'';
+}
+function r_cardHtml(v){
+  var s=v.station, price=v.price, ratio=v.ratio, rmb=v.rmb, days=v.days;
+  var models=v.models, modelNames=v.modelNames, mdRows=v.mdRows;
+  var importedHtml=window.SugarPricing ? SugarPricing.renderStation(s.name) : '';
+  var importedCount=window.SugarPricing ? SugarPricing.countStation(s.name) : 0;
+  var priceRows=importedHtml
+    ? importedHtml + (models.length ? '<div class="sugar-manual-prices">原有记录定价（额度）</div>' + mdRows : '')
+    : mdRows;
+  var priceCount=models.length + importedCount;
+  var recentTxs=r_recentTxs(v.txs);
+  var txRows = recentTxs.length
+    ? recentTxs.map(function(t){
+        var label=[t.model_name,t.note].filter(Boolean).join(' · ');
+        return '<div class="txrow">' +
+          '<span class="txd">' + r_escapeHtml((t.record_date||'').slice(5)) + '</span>' +
+          '<span class="txm">' + (label? r_escapeHtml(label) : '') + '</span>' +
+          '<span class="txq">-' + r_fm(t.consumed_quota,2) + '</span>' +
+        '</div>';
+      }).join('')
+    : '<div class="txempty">' + (v.txs.length? '最近 '+r_txDays+' 天暂无消费记录' : '暂无消费记录') + '</div>';
+  return '<div class="card" data-sugar-station="' + r_escapeHtml(s.name) + '">' +
+    '<div class="chead"><span class="cname">' + r_escapeHtml(s.name) + '</span><span class="badge">' + (ratio? (price.hasBoth?'折中 1元=':'1元=')+r_fm(ratio,2)+'额度':'未设置比例') + '</span><span class="cbal"><b>￥' + (rmb!==null?r_fm(rmb,2):'—') + '</b></span></div>' +
+    '<div class="cmeta"><span>账面余额 <b>' + r_stationCurrency(s) + r_fm(s.current_balance,2) + '</b></span><span>昨日消耗 <b class="warn">' + r_fm(v.ydConsumedQuota,2) + '</b></span><span>今日签到 <b class="g">+' + r_fm(v.checkin,2) + '</b></span><span>累计消费 ' + (v.totalUsedRMB!==null&&v.totalUsedRMB!==undefined? '<b class="warn">￥' + r_fm(v.totalUsedRMB,2) + '</b>' : '<b>—</b>') + '</span><span>预计可用 <b class="' + (days===null?'':(days<3?'warn':days<10?'y':'g')) + '">' + (days!==null? r_fm(days,1)+' 天' : '暂无记录') + '</b></span></div>' +
+    (modelNames? '<div class="csub">模型：' + r_escapeHtml(modelNames) + (models.length? '（共 '+models.length+' 个）':'') + '</div>':'') +
+    (price.hasBoth? '<div class="csub">正常 ' + r_fm(price.normalUnit,4) + ' · 实际 ' + r_fm(price.actualUnit,4) + ' · 折中 ' + r_fm(price.blendedUnit,4) + ' 元/额度 · ' + r_fm(price.discount*10,2) + ' 折</div>' : (price.blendedUnit? '<div class="csub">折中单价 ' + r_fm(price.blendedUnit,4) + ' 元/额度</div>' : '')) +
+    ((s.recharge_amount!=null||s.received_quota!=null)? '<div class="csub">充值 ¥' + (s.recharge_amount!=null?r_fm(s.recharge_amount,2):'—') + ' → ' + (s.received_quota!=null?r_fm(s.received_quota,2):'—') + ' 额度</div>':'') +
+    (s.note? (function(){
+      var full=String(s.note),match=full.match(/https?:\/\/[^\s；]+/i);
+      var label=match?full.slice(0,match.index).replace(/[；\s]+$/,'')+'；':full;
+      return '<div class="csub">备注：'+r_escapeHtml(label)+'</div>'+
+        (match?'<div class="csub">'+r_escapeHtml(match[0])+'</div>':'');
+    })():'') +
+    '<details class="txw" data-sugar-open-id="prices"><summary>模型定价' + (priceCount? '（'+priceCount+'）':'') + '</summary>' +
+      '<div class="txlist">' + priceRows + '</div>' +
+    '</details>' +
+    '<details class="txw" data-sugar-open-id="transactions"><summary><span>最近流水' + (recentTxs.length? '（'+recentTxs.length+'）':'') + '</span><span class="txright"><span class="txdays">近' + r_txDays + '天</span></span></summary>' +
+      '<div class="txlist">' + txRows + '</div>' +
+    '</details>' +
+  '</div>';
+}
+function todayStr(){
+  var d=new Date();
+  var y=d.getFullYear();
+  var m=String(d.getMonth()+1).padStart(2,'0');
+  var day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+// 今日签到额度：优先取增长流水里备注标了「签到」的；没有标注时，
+// 退回取今天的正向增长（排除备注写明充值/购买/兑换/邀请的），不编造数据。
+function r_todayCheckinQuota(blog,today){
+  var list=(blog||[]).filter(function(b){return b.record_date===today});
+  if(!list.length) return 0;
+  var labelled=list.filter(function(b){return /签到|check/i.test(String(b.note||''))});
+  var use=labelled.length?labelled:list.filter(function(b){
+    var q=Number(b.quota_amount)||0;
+    return q>0 && !/充值|购买|兑换|邀请/.test(String(b.note||''));
+  });
+  return use.reduce(function(sum,b){return sum+(Number(b.quota_amount)||0)},0);
+}
+function r_setSort(key){
+  if(r_sortKey===key){ r_sortDir*=-1; }
+  else{
+    r_sortKey=key;
+    var d=R_SORT_DEFS.find(function(x){return x.key===key});
+    r_sortDir=d?d.defDir:-1;
+  }
+  r_paint();
+}
+function r_toggleDays(){
+  r_daysCollapsed=!r_daysCollapsed;
+  r_paint();
+}
+function r_sortedViews(){
+  var arr=(r_cachedViews||[]).slice();
+  var dir=r_sortDir;
+  function val(v){
+    switch(r_sortKey){
+      case 'rmb': return v.rmb;
+      case 'checkin': return v.checkin;
+      case 'consumed': return v.consumed;
+      case 'totalUsed': return v.totalUsed;
+      case 'totalUsedRMB': return v.totalUsedRMB;
+      // 没有可用天数数据时，按余额近似（折合人民币优先，没有就用额度余额）
+      case 'days': return (v.days!==null&&v.days!==undefined)? v.days : ((v.rmb!==null&&v.rmb!==undefined)? v.rmb : v.balance);
+      default: return v.balance;
+    }
+  }
+  arr.sort(function(a,b){
+    if(r_sortKey==='name'){
+      return dir * String(a.name||'').localeCompare(String(b.name||''),'zh-Hans-CN');
+    }
+    var va=val(a), vb=val(b);
+    var na=(va===null||va===undefined||isNaN(va)), nb=(vb===null||vb===undefined||isNaN(vb));
+    if(na&&nb) return 0;
+    if(na) return 1;
+    if(nb) return -1;
+    return dir * (Number(va)-Number(vb));
+  });
+  return arr;
+}
+function r_paint(){
+  var root=document.getElementById('root');
+  if(!root||!r_cachedViews||!r_cachedMeta) return;
+  // Preserve station/inner-model accordions while live quotes or sorting repaint.
+  var openDetails=new Set();
+  root.querySelectorAll('.card[data-sugar-station]').forEach(function(card){
+    card.querySelectorAll('details[data-sugar-open-id][open]').forEach(function(d){
+      openDetails.add(card.getAttribute('data-sugar-station')+'\u001f'+d.getAttribute('data-sugar-open-id'));
+    });
+  });
+  var meta=r_cachedMeta;
+  var cardsHtml=r_sortedViews().map(function(v){return r_cardHtml(v)}).join('');
+  var sortBtns=R_SORT_DEFS.map(function(d){
+    var active=d.key===r_sortKey;
+    var arrow=active?(r_sortDir<0?' ↓':' ↑'):'';
+    return '<button type="button" class="sortbtn'+(active?' active':'')+'" aria-pressed="'+active+'" onclick="r_setSort(\''+d.key+'\')">'+d.label+arrow+'</button>';
+  }).join('');
+  var curDef=R_SORT_DEFS.find(function(x){return x.key===r_sortKey})||R_SORT_DEFS[0];
+  var curText=curDef.label+(r_sortDir<0?' · 从大到小 ↓':' · 从小到大 ↑');
+  if(r_sortKey==='name') curText=curDef.label+(r_sortDir<0?' · Z→A ↓':' · A→Z ↑');
+  if(r_sortKey==='days') curText+='（无天数数据时按余额近似）';
+  root.innerHTML =
+    meta.ydRowHtml +
+    '<div class="sum">' +
+      '<div class="sl">全部站点折合总余额</div>' +
+      '<div class="sv">¥ ' + r_fm(meta.totalRMB,2) + '</div>' +
+      '<div class="ss"><span>共 ' + meta.count + ' 个站点</span></div>' +
+      '<div class="dv" style="background:rgba(255,255,255,.25);margin:14px 0 8px"></div>' +
+      '<div class="sl" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px"><span>各站剩余可用天数（从紧到松）</span>' +
+      '<button type="button" class="foldbtn" aria-expanded="' + (!r_daysCollapsed) + '" onclick="r_toggleDays()">' + (r_daysCollapsed?'展开天数列表 ▾':'收起天数列表 ▴') + '</button></div>' +
+      '<div id="rDaysList"' + (r_daysCollapsed?' hidden':'') + '>' + meta.daySummaryHtml + '</div>' +
+    '</div>' +
+    '<div class="sortbar">' +
+      '<div class="scur">当前排序：<b>' + curText + '</b><span class="shint">点选项切换，再点同一项切换正序 / 逆序</span></div>' +
+      '<div class="sortbtns">' + sortBtns + '</div>' +
+      '<div style="margin-top:8px"><button type="button" class="txglobalbtn" onclick="r_openTxDays(event)">⚙ 最近流水天数：近 ' + r_txDays + ' 天（全部站点统一）</button></div>' +
+    '</div>' +
+    '<div id="rStationList">' + cardsHtml + '</div>';
+  root.querySelectorAll('.card[data-sugar-station]').forEach(function(card){
+    card.querySelectorAll('details[data-sugar-open-id]').forEach(function(d){
+      if(openDetails.has(card.getAttribute('data-sugar-station')+'\u001f'+d.getAttribute('data-sugar-open-id'))) d.open=true;
+    });
+  });
+}
+
+async function r_render(){
+  const loadEpoch=++r_loadEpoch;
+  const root=document.getElementById('root');
+  try{
+    let rawCfg = null;
+    if (typeof Bridge !== 'undefined' && typeof Bridge.getPluginConfig === 'function') {
+      rawCfg = await Bridge.getPluginConfig();
+    } else if (typeof Bridge !== 'undefined' && typeof Bridge.getConfig === 'function') {
+      rawCfg = await Bridge.getConfig();
+    }
+    const cfg = (typeof rawCfg === 'string' ? JSON.parse(rawCfg) : rawCfg) || {};
+    const url = cfg.supabase_url || localStorage.getItem('hsb_supabase_url') || '';
+    const key = cfg.supabase_key || localStorage.getItem('hsb_supabase_key') || '';
+    if(!url||!key){
+      root.innerHTML='<div class="err">请点击右上角「⚙️ 配置连接」填写 Supabase URL 和 Key（仅保存在当前设备浏览器本地）</div>';
+      r_showCfgModal();
+      return;
+    }
+    if(window.SugarPricing)SugarPricing.load(url,key);
+    // 一次 RPC 请求把所有站点 + 各自流水 + 各自定价都拿回来，
+    // 不再对每个站点单独发请求，站点多也不会因为串行请求太慢而超时/卡住
+    const stations=await r_sbRpc(url,key,'rpc_get_full_summary',{});
+    if(loadEpoch!==r_loadEpoch) return;
+    if(!stations.length){
+      root.innerHTML='<div class="empty">还没有任何站点，让 AI 帮你新增一个吧～</div>';
+      return;
+    }
+    let totalRMB=0, daySummary=[]; const views=[];
+    // 昨日四项统计：消费额度/消费金额只统计消耗（不含增长），额度增长/金额增长只统计充值等增长（不含消耗）
+    let ydConsumedQuotaSum=0, ydConsumedRMBSum=0, ydGrowthQuotaSum=0, ydGrowthRMBSum=0;
+    const yd=ydStr(); const td=todayStr();
+    for(const s of stations){
+      const txs=s.transactions||[];
+      const blog=s.balance_log||[];
+      const models=(s.models||[]).slice().sort((a,b)=>(a.model_name||'').localeCompare(b.model_name||''));
+      const price=r_priceInfo(s);
+      const ratio=price.blendedUnit?1/price.blendedUnit:null;
+      const rmb=price.blendedUnit? s.current_balance*price.blendedUnit : null;
+      if(rmb) totalRMB+=rmb;
+      // 昨日消费：只看 record_date===昨天 的消费流水，额度直接求和；金额用折中单价换算
+      // （ratio 已是折中单价对应的 1元额度数，额度/ratio 就是额度×折中单价），
+      // 没有任何价格的站点就不计入"昨日消费金额"（但仍计入"昨日消费额度"），避免硬凑数字
+      const ydTxs=txs.filter(t=>t.record_date===yd);
+      const ydConsumedQuota=ydTxs.reduce((sum,t)=>sum+(Number(t.consumed_quota)||0),0);
+      ydConsumedQuotaSum+=ydConsumedQuota;
+      const todayCheckinQuota=r_todayCheckinQuota(blog,td);
+      if(ratio && ydConsumedQuota>0) ydConsumedRMBSum+=ydConsumedQuota/ratio;
+      // 昨日增长：只看 record_date===昨天 的额度增长流水（充值/签到/邀请等），额度直接求和；
+      // 金额优先用记录自己填的 rmb_amount，没填的话用该站点的折中单价把额度换算成钱——
+      // 和"折合总余额"用的是同一套折中单价，口径统一，签到奖励也按 签到额度×折中单价 换算进来。
+      // 站点没设置比例时这部分就没法换算，只能跳过（不会瞎猜金额）
+      const ydGrowth=blog.filter(b=>b.record_date===yd);
+      ydGrowthQuotaSum+=ydGrowth.reduce((sum,b)=>sum+(Number(b.quota_amount)||0),0);
+      ydGrowthRMBSum+=ydGrowth.reduce((sum,b)=>{
+        if(b.rmb_amount!=null) return sum+(Number(b.rmb_amount)||0);
+        if(ratio) return sum+(Number(b.quota_amount)||0)/ratio;
+        return sum;
+      },0);
+      const days=estimateRemainingDays(s,txs);
+      daySummary.push({name:s.name, days});
+      const mdRows = models.length
+        ? models.map(m=>{
+            const priceText = m.pricing_type==='per_call'
+              ? (m.per_call_price!=null? r_fm(m.per_call_price,4)+' 额度/次' : '未设置价格')
+              : `入 ${m.input_price!=null? r_fm(m.input_price,4):'—'} / 出 ${m.output_price!=null? r_fm(m.output_price,4):'—'} （额度/M token）`;
+            const est = estimatePerModel(m, s, txs);
+            const bits = [];
+            if (est.remainingCalls!==null) bits.push('约 '+r_fm(est.remainingCalls,0)+' 次');
+            if (est.remainingDays!==null) bits.push(r_fm(est.remainingDays,1)+' 天');
+            const estText = bits.length ? bits.join(' · ') : (est.hasHistory? '' : '暂无该模型历史流水');
+            return `<div class="txrow" style="flex-direction:column;align-items:stretch;gap:2px">
+              <div style="display:flex;justify-content:space-between">
+                <span class="txm" style="flex:1;padding:0">${r_escapeHtml(m.model_name)}</span>
+                <span class="txq" style="color:var(--st);font-weight:600">${priceText}</span>
+              </div>
+              ${estText? `<div style="font-size:11px;color:var(--ts);text-align:right">按当前余额推算：${estText}</div>` : ''}
+            </div>`;
+          }).join('')
+        : `<div class="txempty">暂无定价信息</div>`;
+      const modelNames= models.map(m=>m.model_name).filter(Boolean).join('、');
+      views.push({
+        name:s.name||'',
+        balance:Number(s.current_balance)||0,
+        rmb:rmb,
+        checkin:todayCheckinQuota,
+        consumed:ydConsumedQuota,
+        days:days,
+        station:s,
+        price:price,
+        ratio:ratio,
+        models:models,
+        modelNames:modelNames,
+        mdRows:mdRows,
+        ydConsumedQuota:ydConsumedQuota,
+        totalUsed:(s.total_used_quota!=null? Number(s.total_used_quota) : null),
+        totalUsedRMB:(price.blendedUnit&&s.total_used_quota!=null? Number(s.total_used_quota)*price.blendedUnit : null),
+        txs:txs
+      });
+    }
+    daySummary.sort((a,b)=>{
+      if(a.days===null) return 1;
+      if(b.days===null) return -1;
+      return a.days-b.days;
+    });
+    const daySummaryHtml = daySummary.map(d=>{
+      const cls = d.days===null?'':(d.days<3?'v warn':d.days<10?'v y':'v g');
+      return `<div class="row" style="padding:4px 0"><span class="l" style="color:rgba(255,255,255,.85)">${r_escapeHtml(d.name)}</span><span class="${cls||'v'}" style="${cls?'':'color:#FFF'}">${d.days!==null? r_fm(d.days,1)+' 天':'暂无消费记录'}</span></div>`;
+    }).join('');
+    const ydRowHtml = `
+      <div class="ydrow">
+        <div class="ydcell"><div class="yl">📉 昨日消费额度</div><div class="yv warn">${r_fm(ydConsumedQuotaSum,2)}</div></div>
+        <div class="ydcell"><div class="yl">📉 昨日消费金额</div><div class="yv warn">¥${r_fm(ydConsumedRMBSum,2)}</div></div>
+        <div class="ydcell"><div class="yl">📈 昨日额度增长</div><div class="yv g">${r_fm(ydGrowthQuotaSum,2)}</div></div>
+        <div class="ydcell"><div class="yl">📈 昨日金额增长</div><div class="yv g">¥${r_fm(ydGrowthRMBSum,2)}</div></div>
+      </div>`;
+    r_cachedViews=views;
+    r_cachedMeta={totalRMB:totalRMB, ydRowHtml:ydRowHtml, daySummaryHtml:daySummaryHtml, count:stations.length};
+    r_paint();
+  }catch(e){
+    if(loadEpoch!==r_loadEpoch) return;
+    root.innerHTML=`<div class="err">加载失败：${r_escapeHtml(e.message)}</div>`;
+  }
+}
+function r_escapeHtml(s){const d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML}
+
+function r_showCfgModal(){
+  document.getElementById('rcfgUrl').value = localStorage.getItem('hsb_supabase_url') || '';
+  document.getElementById('rcfgKey').value = localStorage.getItem('hsb_supabase_key') || '';
+  document.getElementById('rcfgModal').style.display = 'flex';
+}
+
+function r_hideCfgModal(){
+  document.getElementById('rcfgModal').style.display = 'none';
+}
+function r_saveCfgLocal(){
+  const u = (document.getElementById('rcfgUrl').value || '').trim().replace(/\/+$/, '');
+  const k = (document.getElementById('rcfgKey').value || '').trim();
+  if(!u || !k){ document.getElementById('rcfgMsg').textContent='请完整填写 Supabase URL 和 Key'; return; }
+  localStorage.setItem('hsb_supabase_url', u);
+  localStorage.setItem('hsb_supabase_key', k);
+  r_hideCfgModal();
+  r_render();
+}
+function initializeRelay(){
+  // A local file without configured Supabase shows a welcome/setup state.
+  let u='', k='';
+  try{u=localStorage.getItem('hsb_supabase_url');k=localStorage.getItem('hsb_supabase_key');}catch(_){ }
+  if(u&&k)r_render();
+  else document.getElementById('root').innerHTML='<div class="empty">尚未连接 Supabase。点击右上角「配置连接」，填写你自己的项目地址与 publishable/anon Key。</div>';
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initializeRelay);
+else initializeRelay();
+</script>
+</body>
+</html>
